@@ -4,39 +4,14 @@ require 'tadb'
 class Module
     def has_one type, description
         # TODO check tipos
-        table_create # si la clase no tiene tabla, la crea y le agrega la interfaz para manejarla
+        extend PersistibleModule
+        initialize_persistence
         attr_name = description[:named]
         @persistible_attrs.delete_if { |attr| attr[:name] == attr_name } 
         @persistible_attrs << {name: attr_name, type: type} # sería como la metadata de @table
         attr_accessor attr_name
     end
-
-    def table_create
-        if not @persistible_attrs then @persistible_attrs = [] end
-        if not @table
-            @table = TADB::DB.table(name)
-            extend PersistibleModule # si tiene tabla, necesita comportamiento de persistencia
-            include PersistibleObject # es necesaria la distinción porque extend es para lo estático exclusivamente
-        end
-    end
-
-    private :table_create
 end 
-
-
-module PersistibleModule
-    def table_insert hashed_instance
-        @table.insert(hashed_instance)
-    end      
-
-    def table_find_by_id id
-        @table.entries.detect { |entry| entry[:id] == id }
-    end
-
-    def table_delete_by_id id
-        @table.delete id
-    end
-end
 
 
 module PersistibleObject
@@ -66,6 +41,29 @@ module PersistibleObject
         self.class.table_delete_by_id @id
         singleton_class.remove_method :id
         @id = nil # si no hago esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! se rompe 
+    end
+end
+
+
+module PersistibleModule
+    def initialize_persistence
+        if not @table
+            include PersistibleObject
+            @persistible_attrs = []
+            @table = TADB::DB.table(name)
+        end
+    end
+
+    def table_insert hashed_instance
+        @table.insert(hashed_instance)
+    end      
+
+    def table_find_by_id id
+        @table.entries.detect { |entry| entry[:id] == id }
+    end
+
+    def table_delete_by_id id
+        @table.delete id
     end
 end
 
