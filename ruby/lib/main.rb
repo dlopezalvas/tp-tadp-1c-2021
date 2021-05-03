@@ -1,57 +1,62 @@
 require 'tadb'
 
+
 class Module
-    def has_one type, desc
-        selector = desc[:named] # selector es el nombre de la columna
+    def has_one type, description
         # TODO check tipos
-        create_table # si la clase no tiene tabla, la crea
-        attr_accessor selector
-        if not @persistent_attrs # seguimiento de los atributos a persistir
-            @persistent_attrs = []
-        @persistent_attrs << selector
+        table_create # si la clase no tiene tabla, la crea y le agrega la interfaz para manejarla
+        attr_name = description[:named]
+        @persistible_attrs.delete_if { |attr| attr[:name] == attr_name } 
+        @persistible_attrs << {name: attr_name, type: type} # sería como la metadata de @table
+        attr_accessor attr_name
+    end
+
+    def table_create
+        if not @persistible_attrs then @persistible_attrs = [] end
+        if not @table
+            @table = TADB::DB.table(name)
+            extend PersistibleModule # si tiene tabla, necesita comportamiento de persistencia
+            include PersistibleObject # es necesaria la distinción porque extend es para lo estático exclusivamente
         end
     end
 
-    def table_insert hashed_instance # pongo esta logica acá porque la tabla es de la clase
+    private :table_create
+end 
+
+
+module PersistibleModule
+    def table_insert hashed_instance
         @table.insert(hashed_instance)
-    end
+    end      
 
     def table_find_by_id id
-        @table.entries.detect do |entry|
-            entry[:id] == id
-        end
+        @table.entries.detect { |entry| entry[:id] == id }
     end
 
     def table_delete_by_id id
         @table.delete id
     end
+end
 
-    private
-    def create_table
-        if not @table
-            include Persistent # si tiene tabla, necesita comportamiento de persistencia
-            @table = TADB::DB.table(name)
-        end
-    end
-end 
 
-module Persistent
+module PersistibleObject
     def save!
         if not @id
-            define_singleton_method :id do # lo pongo como singleton porque no todos los objetos persistentes tienen id hasta el primer save!
-                @id
-            end
+            define_singleton_method(:id) { @id } # en la singleton class porque sólo tienen que tenerlo los objetos a los que se les mandó save!
             self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
-            (self.class.instance_variable_get :@persistent_attrs).each do |selector|
-                self_hashed[selector] = self.send selector # por cada atributo a persistir, lo incluyo en el hash que mando a insertar a la tabla
+            (self.class.instance_variable_get :@persistible_attrs).each do |attr|
+                selector = attr[:name]
+                self_hashed[selector] = self.send selector # incluyo cada atributo a persistir en el hash que mando a insertar a la tabla
             end
             @id = self.class.table_insert self_hashed
+        else
+            # TODO pensar cómo conviene hacer updates (por el tema del id autogenerado)
         end
     end
 
     def refresh!
         (self.class.table_find_by_id @id).each do |attr_name, attr_value|
-            if attr_name != :id
+            if attr_name != :id # necesito hacer esto porque :id no tiene setter; no hago un reject de antemano porque sería menos performante creo
                 self.send (attr_name.to_s + '=').to_sym, attr_value
             end
         end
@@ -59,14 +64,9 @@ module Persistent
 
     def forget!
         self.class.table_delete_by_id @id
-        @id = nil
         singleton_class.remove_method :id
-        return
+        @id = nil # si no hago esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! se rompe 
     end
 end
 
-# cosas de prueba
-class B
-    has_one String, named: :repe
-    # has_one String, named: :repe
-end
+
