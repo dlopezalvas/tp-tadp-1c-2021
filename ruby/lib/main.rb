@@ -13,7 +13,7 @@ class Module
 end 
 
 
-module ORM
+module ORM # a las cosas de acá se pueden acceder a través de ORM::<algo>
     module PersistibleObject
         def save!
             if not @id
@@ -47,7 +47,7 @@ module ORM
 
 
     module PersistibleModule
-        def initialize_persistence
+        def initialize_persistence # esto no sé si es necesario abstraer pero bueno
             if not @table
                 include PersistibleObject
                 @persistible_attrs = []
@@ -55,7 +55,8 @@ module ORM
             end
         end
 
-        def table_insert hashed_instance
+        # estos métodos table_* no sé si están contaminando la interfaz. quizás sea bueno ocultarlos de alguna manera. a estos métodos los llaman las instancias cuando hacen save!, refresh!, etc.
+        def table_insert hashed_instance 
             @table.insert(hashed_instance)
         end      
 
@@ -67,7 +68,7 @@ module ORM
             @table.delete id
         end
 
-        def all_instances # creo cada instancia, le seteo un id válido y le doy refresh. con eso, armo la lista que devuelvo 
+        def all_instances 
             return instantiate @table.entries
         end
 
@@ -82,7 +83,7 @@ module ORM
         end
 
         private
-        def instantiate entries
+        def instantiate entries # creo cada instancia, le seteo un id válido y le doy refresh. con eso, armo la lista que devuelvo 
             return entries.map do |entry|
                 instance = new
                 instance.define_singleton_method(:id) { @id }
