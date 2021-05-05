@@ -66,6 +66,20 @@ module ORM
         def table_delete_by_id id
             @table.delete id
         end
+
+        def all_instances # creo cada instancia, le seteo un id válido y le doy refresh. con eso, armo la lista que devuelvo 
+            instances = []
+            @table.entries.each do |entry|
+                instance = new
+                instance.define_singleton_method(:id) { @id }
+                instance.define_singleton_method(:id=) { |id| @id = id }
+                instance.id=entry[:id]
+                instance.singleton_class.remove_method(:id=) # este método se lo damos sólo para setearle el id acá adentro
+                instance.refresh!
+                instances << instance
+            end
+            return instances
+        end
     end
 end
 
