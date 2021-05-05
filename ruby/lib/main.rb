@@ -68,20 +68,34 @@ module ORM
         end
 
         def all_instances # creo cada instancia, le seteo un id válido y le doy refresh. con eso, armo la lista que devuelvo 
-            instances = []
-            @table.entries.each do |entry|
+            return instantiate @table.entries
+        end
+
+        def method_missing symbol, *args, &block # para tratar con el requerimiento de find_by_<what>
+            prefix = 'find_by_'
+            requested_attr = @persistible_attrs.detect { |attr| attr[:name].to_s == symbol.to_s[(prefix.length)..-1] }
+            if requested_attr and symbol.to_s.start_with? prefix
+                return instantiate @table.entries.select { |entry| entry[requested_attr[:name]] == args[0] }
+            else
+                super
+            end
+        end
+
+        private
+        def instantiate entries
+            return entries.map do |entry|
                 instance = new
                 instance.define_singleton_method(:id) { @id }
                 instance.define_singleton_method(:id=) { |id| @id = id }
                 instance.id=entry[:id]
                 instance.singleton_class.remove_method(:id=) # este método se lo damos sólo para setearle el id acá adentro
                 instance.refresh!
-                instances << instance
-            end
-            return instances
+                instance
+            end 
         end
     end
 end
+
 
 # para testear a manopla
 module CosasTesting
