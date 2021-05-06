@@ -35,6 +35,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def refresh!
+            exception_if_no_id
             (self.class.ORM_get_entry @id).each do |attr_name, attr_value|
                 if attr_name != :id # necesito hacer esto porque :id no tiene setter; no hago un reject de antemano porque sería menos performante creo
                     send (attr_name.to_s + '=').to_sym, attr_value # seteo cada atributo con el valor dado por la entry de la tabla
@@ -44,10 +45,17 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def forget!
+            exception_if_no_id
             self.class.ORM_delete_by_id @id
             singleton_class.remove_method :id
             @id = nil # si no hago esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! se rompe 
         end
+
+        def exception_if_no_id
+            if not @id then raise 'this instance is not persisted' end
+        end
+
+        private :exception_if_no_id
     end
 
 
