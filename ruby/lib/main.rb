@@ -21,15 +21,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     module PersistibleObject # esto es sólo para objetos; todo lo estático está en PersistibleModule
         def save!
             if not @id
-                print("save ", self.class, "\n")
-                print("pas ", self.class.instance_variable_get(:@persistible_attrs), "\n")
                 define_singleton_method(:id) { @id } # en la singleton class porque sólo tienen que tenerlo los objetos a los que se les mandó save!
                 self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
                 (self.class.instance_variable_get :@persistible_attrs).each do |attr|
                     attr_value = send attr[:name]
-                    print("an ", attr[:name], "\n")
                     if not attr_value == nil
-                        print("av not null\n")
                         if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
                             self_hashed[attr[:name]] = attr_value.save!
                         else
@@ -37,7 +33,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                         end
                     end
                 end
-                print("sh ", self_hashed, "\n")
                 @id = self.class.send :ORM_insert, self_hashed
                 return @id # es necesario que se devuelva el id por como funciona la composición
             end
@@ -51,7 +46,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 if attr_name != :id # necesito hacer esto porque :id no tiene setter; no hago un reject de antemano porque sería menos performante creo
                     attr_type = ((self.class.instance_variable_get :@persistible_attrs).detect{ |attr| attr[:name] == attr_name })[:type] # TODO abstraer
                     if attr_type.singleton_class.ancestors.include? PersistibleModule # TODO abstraer?
-                        print("at ", attr_type, "\n")
                         attr_final_value = (attr_type.find_by_id attr_value)[0] # TODO ojo porque lo estamos buscando desde la tabla; podría haber varios objetos distintos para la misma entrada de la tabla
                     else
                         attr_final_value = attr_value
