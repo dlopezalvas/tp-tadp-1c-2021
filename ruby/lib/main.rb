@@ -27,7 +27,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     attr_value = send attr[:name]
                     if attr_value != nil then self_hashed[attr[:name]] = attr_value end # para no romper en caso de que un atributo esté en nil; las tablas no aceptan nil
                 end
-                @id = self.class.ORM_insert self_hashed
+                @id = self.class.send :ORM_insert, self_hashed
                 return # para no devolver el id
             end
             forget! # TADB sólo permite insertar o borrar, no hay update. así que...
@@ -36,7 +36,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def refresh!
             exception_if_no_id
-            (self.class.ORM_get_entry @id).each do |attr_name, attr_value|
+            (self.class.send :ORM_get_entry, @id).each do |attr_name, attr_value|
                 if attr_name != :id # necesito hacer esto porque :id no tiene setter; no hago un reject de antemano porque sería menos performante creo
                     send (attr_name.to_s + '=').to_sym, attr_value # seteo cada atributo con el valor dado por la entry de la tabla
                 end
@@ -46,7 +46,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def forget!
             exception_if_no_id
-            self.class.ORM_delete_by_id @id
+            self.class.send :ORM_delete_entry, @id
             singleton_class.remove_method :id
             @id = nil # si no hago esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! se rompe 
         end
@@ -69,7 +69,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             @table.entries.detect { |entry| entry[:id] == id }
         end
 
-        def ORM_delete_by_id id
+        def ORM_delete_entry id
             @table.delete id
         end
 
@@ -99,7 +99,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end 
         end
 
-        private :instantiate
+        private :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry
     end
 end
 
