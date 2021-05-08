@@ -21,14 +21,25 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     module PersistibleObject # esto es sólo para objetos; todo lo estático está en PersistibleModule
         def save!
             if not @id
+                print("save ", self.class, "\n")
+                print("pas ", self.class.instance_variable_get(:@persistible_attrs), "\n")
                 define_singleton_method(:id) { @id } # en la singleton class porque sólo tienen que tenerlo los objetos a los que se les mandó save!
                 self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
                 (self.class.instance_variable_get :@persistible_attrs).each do |attr|
                     attr_value = send attr[:name]
-                    if attr_value != nil then self_hashed[attr[:name]] = attr_value end # para no romper en caso de que un atributo esté en nil; las tablas no aceptan nil
+                    print("an ", attr[:name], "\n")
+                    if not attr_value == nil
+                        print("av not null\n")
+                        if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
+                            self_hashed[attr[:name]] = attr_value.save!
+                        else
+                            self_hashed[attr[:name]] = attr_value
+                        end
+                    end
                 end
+                print("sh ", self_hashed, "\n")
                 @id = self.class.send :ORM_insert, self_hashed
-                return # para no devolver el id
+                return @id # es necesario que se devuelva el id por como funciona la composición
             end
             forget! # TADB sólo permite insertar o borrar, no hay update. así que...
             save! # así entra en el if de arriba y se persiste con un nuevo id
@@ -38,13 +49,20 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             exception_if_no_id
             (self.class.send :ORM_get_entry, @id).each do |attr_name, attr_value|
                 if attr_name != :id # necesito hacer esto porque :id no tiene setter; no hago un reject de antemano porque sería menos performante creo
-                    send (attr_name.to_s + '=').to_sym, attr_value # seteo cada atributo con el valor dado por la entry de la tabla
+                    attr_type = ((self.class.instance_variable_get :@persistible_attrs).detect{ |attr| attr[:name] == attr_name })[:type] # TODO abstraer
+                    if attr_type.singleton_class.ancestors.include? PersistibleModule # TODO abstraer?
+                        print("at ", attr_type, "\n")
+                        attr_final_value = (attr_type.find_by_id attr_value)[0] # TODO ojo porque lo estamos buscando desde la tabla; podría haber varios objetos distintos para la misma entrada de la tabla
+                    else
+                        attr_final_value = attr_value
+                    end
+                    send (attr_name.to_s + '=').to_sym, attr_final_value # seteo cada atributo con el valor dado por la entry de la tabla
                 end
             end
             self
         end
 
-        def forget!
+        def forget! # se asume que no cascadea
             exception_if_no_id
             self.class.send :ORM_delete_entry, @id
             singleton_class.remove_method :id
@@ -52,7 +70,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def exception_if_no_id
-            if not @id then raise 'this instance is not persisted' end
+            if not @id then raise 'this instance is not persisted' end # TODO armar excepciones decentes
         end
 
         private :exception_if_no_id
@@ -60,7 +78,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre include y extend
-        # estos métodos ORM_* no sé si no estarán contaminando la interfaz. quizás sea bueno ocultarlos de alguna manera. a estos métodos los llaman los objetos cuando hacen save!, refresh!, etc.
         def ORM_insert hashed_instance 
             @table.insert(hashed_instance)
         end      
@@ -106,8 +123,13 @@ end
 
 # para testear a manopla
 module CosasTesting
-    class A
-        has_one String, named: :coso
-        has_one Numeric, named: :coso
+    class Grade
+        has_one Numeric, named: :value
+    end
+
+    class Student
+        has_one String, named: :full_name
+        has_one Grade, named: :grade
     end
 end
+
