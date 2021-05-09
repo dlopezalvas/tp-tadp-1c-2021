@@ -6,7 +6,7 @@ class Module
         if not @table
             extend ORM::PersistibleModule # así el módulo/clase soporta persistencia (tiene tabla, atributos persistibles, etc.)
             include ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia
-            @persistible_attrs = []
+            @persistible_attrs = [{name: :id, type: String}]
             @table = TADB::DB.table(name)
         end
         attr_name = description[:named]
@@ -20,24 +20,24 @@ end
 module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la idea es no contaminar el namespace
     module PersistibleObject # esto es sólo para objetos; todo lo estático está en PersistibleModule
         def save!
-            if not @id
-                define_singleton_method(:id) { @id } # en la singleton class porque sólo tienen que tenerlo los objetos a los que se les mandó save!
-                self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
-                (self.class.instance_variable_get :@persistible_attrs).each do |attr|
-                    attr_value = send attr[:name]
-                    if not attr_value == nil
-                        if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
-                            self_hashed[attr[:name]] = attr_value.save!
-                        else
-                            self_hashed[attr[:name]] = attr_value
-                        end
-                    end
-                end
-                @id = self.class.send :ORM_insert, self_hashed
-                return @id # es necesario que se devuelva el id por como funciona la composición
+            if @id 
+                self.class.send :ORM_delete_entry, @id
+            else    
+                define_singleton_method(:id) { @id }
             end
-            forget! # TADB sólo permite insertar o borrar, no hay update. así que...
-            save! # así entra en el if de arriba y se persiste con un nuevo id
+            self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
+            (self.class.instance_variable_get :@persistible_attrs).each do |attr|
+                attr_value = send attr[:name]
+                if not attr_value == nil
+                    if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
+                        attr_final_value = attr_value.save!
+                    else
+                        attr_final_value = attr_value
+                    end
+                    self_hashed[attr[:name]] = attr_final_value
+                end
+            end
+            @id = self.class.send :ORM_insert, self_hashed
         end
 
         def refresh!
@@ -60,7 +60,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             exception_if_no_id
             self.class.send :ORM_delete_entry, @id
             singleton_class.remove_method :id
-            @id = nil # si no hago esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! se rompe 
+            @id = nil # si no hago esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! puede romper
         end
 
         def exception_if_no_id
@@ -90,8 +90,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def method_missing symbol, *args, &block # para tratar con el requerimiento de find_by_<what>
             prefix = 'find_by_'
-            id_attr = [{name: :id, type: String}] # porque id no está incluído en @persistible_attrs
-            query_attr = (@persistible_attrs + id_attr).detect { |attr| attr[:name].to_s == symbol.to_s[(prefix.length)..-1] } # buscamos el campo según el cual se filtra en la query
+            query_attr = @persistible_attrs.detect { |attr| attr[:name].to_s == symbol.to_s[(prefix.length)..-1] } # buscamos el campo según el cual se filtra en la query
             if query_attr and symbol.to_s.start_with? prefix # si el campo existe y el prefijo es el correcto:
                 instantiate @table.entries.select { |entry| entry[query_attr[:name]] == args[0] } # se instancian los que cumplen la condición
             else
