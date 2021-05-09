@@ -111,7 +111,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     end
 
 
-    module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre include y extend
+    module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre include/prepend y extend
         def ORM_insert hashed_instance 
             @table.insert(hashed_instance)
         end      
