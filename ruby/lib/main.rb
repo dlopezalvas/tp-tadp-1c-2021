@@ -83,7 +83,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
                 matching_entries = ((attr_table attr[:name]).entries.select { |entry| entry[('id_' + self.class.name).to_sym] == @id })
                 elem_enum = matching_entries.map do |entry|
-                    attr[:type].find_by_id entry[('id_' + attr[:name].to_s).to_sym]
+                    (attr[:type].find_by_id entry[('id_' + attr[:name].to_s).to_sym])[0]
                 end
                 send (attr[:name].to_s + '=').to_sym, elem_enum.to_a
             end
