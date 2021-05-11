@@ -255,9 +255,70 @@ describe "Persistencia de objetos sencillos" do
       expect(juan.nota.valor).to eq 9
     end
 
+    it 'El atributo compuesto puede ser actualizado desde afuera del objeto' do #TODO ver por que no anda
+      jose = Estudiante.new
+      jose.nombre = "jose sbaraglia"
+      nota = Nota.new
+      nota.valor = 8
+      jose.nota = nota
+      jose.save!
+      jose.nota = Nota.new
+      jose.nota.valor = 9
+      nota.valor = 2
+      jose.refresh!
+      expect(jose.nota.valor).to eq 2
+    end
+
+    it 'El atributo compuesto puede ser actualizado desde otro objeto' do
+      pepito = Estudiante.new
+      juani = Estudiante.new
+      juani.nombre = "juani sbaraglia"
+      juani.nota = Nota.new
+      juani.nota.valor = 9
+      juani.save!
+      pepito.nota = juani.nota
+      pepito.nota.valor = 10
+      pepito.save!
+      juani.refresh!
+      expect(juani.nota.valor).to eq 10
+    end
+
+      it 'El atributo compuesto puede ser refrescado desde otro objeto' do
+        pepito = Estudiante.new
+        juani = Estudiante.new
+        juani.nombre = "juani sbaraglia"
+        juani.nota = Nota.new
+        juani.nota.valor = 5
+        juani.save!
+        pepito.nota = juani.nota
+        pepito.nota.valor = 6
+        pepito.save!
+        juani.nota.valor = 4
+        juani.save!
+        pepito.refresh!
+        expect(pepito.nota.valor).to eq 4
+    end
+
+
+    it 'El atributo compuesto tiene la misma referencia que otro atributo compuesto con el mismo objeto' do
+      jose = Estudiante.new
+      jose.nombre = "jose sbaraglia"
+      nota = Nota.new
+      nota.valor = 8
+      jose.nota = nota
+      jose.save!
+      paula = Estudiante.new
+      paula.nota = nota
+      paula.nota.valor = 4
+      paula.save!
+      jose.refresh!
+      expect(jose.nota.valor).to eq 4
+    end
   end
 
   describe 'Composicion con multiples objetos' do
+
+
 
   end
 
