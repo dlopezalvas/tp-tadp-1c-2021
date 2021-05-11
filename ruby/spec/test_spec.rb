@@ -17,6 +17,10 @@ end
 describe "Persistencia de objetos sencillos" do
   let(:persona) { Person.new }
 
+  after do
+    TADB::DB.clear_all
+  end
+
   describe 'has_one' do
     it 'un atributo de un objeto persistible puede cambiar el valor multiples veces' do
       persona.first_name = "raul"
@@ -202,4 +206,5 @@ describe "Persistencia de objetos sencillos" do
     end
 
   end
+
 end
