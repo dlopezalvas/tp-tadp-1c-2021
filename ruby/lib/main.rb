@@ -2,15 +2,15 @@ require 'tadb'
 
 
 class Module
-    def ORM_add_persistible_attr type, description, is_multiple
+    def ORM_add_persistible_attr type, description, is_multiple: # TODO está bien poner esto acá? quizás sea mejor que esté en PersistibleModule
         if type.ancestors.include? ORM::PersistibleObject
             type.send :ORM_add_deletion_observer, self
         end
         if not @table
             extend ORM::PersistibleModule # así el módulo/clase soporta persistencia (tiene tabla, atributos persistibles, etc.)
-            prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia
-            @deletion_observers = []
-            @persistible_attrs = [{name: :id, type: String, multiple: false}]
+            prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
+            @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
+            @persistible_attrs = [{name: :id, type: String, multiple: false}] # la metadata de cada columna de la tabla
             @table = TADB::DB.table(name)
         end
         attr_name = description[:named]
@@ -20,11 +20,11 @@ class Module
     end
 
     def has_one type, description
-        ORM_add_persistible_attr type, description, false
+        ORM_add_persistible_attr type, description, is_multiple: false
     end
 
     def has_many type, description
-        ORM_add_persistible_attr type, description, true
+        ORM_add_persistible_attr type, description, is_multiple: true
     end
 
     private :ORM_add_persistible_attr
@@ -35,38 +35,36 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     module PersistibleObject # esto es sólo para objetos; todo lo estático está en PersistibleModule
         def initialize *args
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
-                send (attr[:name].to_s + '=').to_sym, []
+                send (attr[:name].to_s + '=').to_sym, [] # todo esto es sólo para inicializar las listas persistibles
             end
             super *args
         end
 
         def save!
             if @id 
-                self.class.send :ORM_delete_entry, @id
+                self.class.send :ORM_delete_entry, @id # TODO no estoy seguro de si esto es necesario
             else    
-                define_singleton_method(:id) { @id }
+                define_singleton_method(:id) { @id } # TODO el getter se lo damos en la singleton sólo a los que están persistidos; consultar si está bien
             end
             self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
-            ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] }).each do |attr|
+            ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] or ((send attr[:name]) == nil)}).each do |attr|
                 attr_value = send attr[:name]
-                if not attr_value == nil
-                    if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
-                        self_hashed[attr[:name]] = attr_value.save!
-                    else
-                        self_hashed[attr[:name]] = attr_value
-                    end
+                if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
+                    self_hashed[attr[:name]] = attr_value.save! # se necesita salvar las composiciones simples primero para obtener el id que se guarda acá
+                else
+                    self_hashed[attr[:name]] = attr_value
                 end
             end
-            @id = self.class.send :ORM_insert, self_hashed
+            @id = self.class.send :ORM_insert, self_hashed # se guarda el id ahora porque para las composiciones múltiples se necesita tenerlo
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
-                id_pair_hashed = {}
+                id_pair_hashed = {} # lo que se guardan son un par de ids que describen la relación de composición
                 id_pair_hashed[('id_' + self.class.name).to_sym] = @id
                 (send attr[:name]).each do |elem|
                     id_pair_hashed[('id_' + attr[:name].to_s).to_sym] = elem.save!
                     (self.class.send :ORM_attr_table, attr[:name]).insert id_pair_hashed
                 end
             end
-            return @id
+            return @id # es importante retornar el id para poder hacer save! con composición
         end
 
         def refresh!
@@ -87,18 +85,16 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 end
                 send (attr[:name].to_s + '=').to_sym, elem_enum.to_a
             end
-            self
+            self # es necesario retornar self por cómo está implementado instantiate
         end
 
-        # TODO el forget tiene que borrar toda referencia al id en otras tablas!!!
         def forget! # se asume que no cascadea
             exception_if_no_id
             self.class.send :ORM_notify_deletion, @id
             self.class.send :ORM_delete_entry, @id
             singleton_class.remove_method :id
-            @id = nil # si no hago esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! puede romper
+            @id = nil # si no se hace esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! puede romper
         end
-
 
         def exception_if_no_id
             if not @id then raise 'this instance is not persisted' end # TODO armar excepciones decentes
@@ -108,7 +104,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     end
 
 
-    module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre include/prepend y extend
+    module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
         def ORM_insert hashed_instance 
             @table.insert(hashed_instance)
         end      
@@ -121,19 +117,19 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             @table.delete id
         end
 
-        def ORM_notify_deletion id
+        def ORM_notify_deletion id # para notificar a las clases (observers) que se borró un id; para mantener consistencia
             @deletion_observers.each do |observer|
                 observer.send :ORM_wipe_references_to, self, id
             end
         end
 
-        def ORM_wipe_references_to type, id
+        def ORM_wipe_references_to type, id # acá se recibe todo id que haya sido borrado de la tabla de su clase, cuya clase forme parte de una composición con esta clase receptora
             (@persistible_attrs.select { |attr| attr[:type] == type }).each do |attr|
-                if attr[:multiple]
+                if attr[:multiple] # si es composición multiple se borran las entries correspondientes en la tabla de la relación entre las dos clases
                     ((ORM_attr_table attr[:name]).entries.select { |entry| entry[('id_' + attr[:name].to_s).to_sym] == id }).each do |entry|
                         (ORM_attr_table attr[:name]).delete entry[:id]
                     end
-                else
+                else # si es composición simple, se debe traer el objeto a memoria, setear el atributo en nil, y darle save! de nuevo
                     intances_to_update = send ('find_by_' + attr[:name].to_s).to_sym, id
                     intances_to_update.each do |instance|
                         instance.send (attr[:name].to_s + '=').to_sym, nil
@@ -143,11 +139,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        def ORM_add_deletion_observer a_class
+        def ORM_add_deletion_observer a_class # suscripción de una clase a las notificaciones de borrado
             @deletion_observers << a_class
         end
 
-        def ORM_attr_table attr_name_symbol 
+        def ORM_attr_table attr_name_symbol # getter de la tabla correspondiente a una relación por has_many
             TADB::DB.table(name + '__' + attr_name_symbol.to_s)
         end
 
