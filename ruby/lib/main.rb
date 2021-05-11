@@ -1,5 +1,6 @@
 require 'tadb'
 
+# TODO abstraer transformaciones de símbolos
 
 class Module
     def ORM_add_persistible_attr type, description, is_multiple: # TODO está bien poner esto acá? quizás sea mejor que esté en PersistibleModule
