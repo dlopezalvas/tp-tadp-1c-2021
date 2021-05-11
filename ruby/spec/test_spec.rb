@@ -64,4 +64,14 @@ describe "Persistencia de objetos sencillos" do
       expect{objeto.refresh!}.to raise_error 'this instance is not persisted' #TODO ver de cambiar cuando se hagan excepciones decentes (?)
     end
   end
+
+  describe 'forget!' do
+    it 'un objeto al que se le mando forget! deja de tener @id' do
+      persona.first_name = "arturo"
+      persona.last_name = "puig"
+      persona.save!
+      persona.forget!
+      expect{persona.refresh!}.to raise_error 'this instance is not persisted' #TODO ver de cambiar cuando se hagan excepciones decentes (?)
+    end
+  end
 end
