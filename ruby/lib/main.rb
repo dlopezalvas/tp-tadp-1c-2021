@@ -7,16 +7,24 @@ class Module
         if type.ancestors.include? ORM::PersistibleObject
             type.send :ORM_add_deletion_observer, self
         end
-        if not @table
-            extend ORM::PersistibleModule # así el módulo/clase soporta persistencia (tiene tabla, atributos persistibles, etc.)
-            prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
+        if not @persistible_attrs
+            if self.class == Class
+                extend ORM::PersistibleClass
+                prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
+                @table = TADB::DB.table(name)
+            else
+                extend ORM::PersistibleModule
+            end
+            @descendants = []
             @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
             @persistible_attrs = [{name: :id, type: String, multiple: false}] # la metadata de cada columna de la tabla
-            @table = TADB::DB.table(name)
         end
         attr_name = description[:named]
         @persistible_attrs.delete_if { |attr| attr[:name] == attr_name } 
         @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple} # @persistible_attrs sería como la metadata de la @table del módulo
+        @descendants.each do |descendant|
+            descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO check que esta sintaxis esté bien para usar send
+        end
         attr_accessor attr_name # define getters+setters para los objetos
     end
 
@@ -40,6 +48,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             super *args
         end
+
 
         def save!
             if @id 
@@ -106,16 +115,21 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
-        def ORM_insert hashed_instance 
-            @table.insert(hashed_instance)
-        end      
-
-        def ORM_get_entry id
-            @table.entries.detect { |entry| entry[:id] == id }
+        def included includer_module
+            ORM_add_descendant includer_module
         end
 
-        def ORM_delete_entry id
-            @table.delete id
+        # TODO armar un module a modo de namespace para los métodos ORM_*?
+        def ORM_add_descendant descendant # TODO private
+            if not descendant.singleton_class.ancestors.include? PersistibleModule
+            @descendants << descendant
+            @persistible_attrs.each do |attr|
+                descendant.send :ORM_add_persistible_attr, attr[:type], (ORM_get_description :attr), is_multiple: attr[:multiple]
+            end
+        end
+
+        def ORM_get_all_deletion_observers
+            @descendants + @deletion_observers # TODO sacar duplicados? creo que da igual
         end
 
         def ORM_notify_deletion id # para notificar a las clases (observers) que se borró un id; para mantener consistencia
@@ -124,28 +138,8 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        def ORM_wipe_references_to type, id # acá se recibe todo id que haya sido borrado de la tabla de su clase, cuya clase forme parte de una composición con esta clase receptora
-            (@persistible_attrs.select { |attr| attr[:type] == type }).each do |attr|
-                if attr[:multiple] # si es composición multiple se borran las entries correspondientes en la tabla de la relación entre las dos clases
-                    ((ORM_attr_table attr[:name]).entries.select { |entry| entry[('id_' + attr[:name].to_s).to_sym] == id }).each do |entry|
-                        (ORM_attr_table attr[:name]).delete entry[:id]
-                    end
-                else # si es composición simple, se debe traer el objeto a memoria, setear el atributo en nil, y darle save! de nuevo
-                    intances_to_update = send ('find_by_' + attr[:name].to_s).to_sym, id
-                    intances_to_update.each do |instance|
-                        instance.send (attr[:name].to_s + '=').to_sym, nil
-                        instance.save!
-                    end
-                end
-            end
-        end
-
         def ORM_add_deletion_observer a_class # suscripción de una clase a las notificaciones de borrado
             @deletion_observers << a_class
-        end
-
-        def ORM_attr_table attr_name_symbol # getter de la tabla correspondiente a una relación por has_many
-            TADB::DB.table(name + '__' + attr_name_symbol.to_s)
         end
 
         def all_instances 
@@ -156,6 +150,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             prefix = 'find_by_'
             query_attr = @persistible_attrs.detect { |attr| attr[:name].to_s == symbol.to_s[(prefix.length)..-1] } # buscamos el campo según el cual se filtra en la query
             if query_attr and symbol.to_s.start_with? prefix # si el campo existe y el prefijo es el correcto:
+                # TODO los módulos deben delegar a los descendants; las clases, eso y también buscar en su propia tabla
                 # TODO no se está contemplando comparar por id para los atributos persistibles referenciados
                 instantiate @table.entries.select { |entry| entry[query_attr[:name]] == args[0] } # se instancian los que cumplen la condición
             else
@@ -176,6 +171,47 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         private :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_notify_deletion, :ORM_wipe_references_to, :ORM_add_deletion_observer, :ORM_attr_table
     end
+
+
+    module PersistibleClass
+        extend PersistibleModule
+
+        def inherited descendant_class
+            ORM_add_descendant descendant_class
+        end
+
+        def ORM_insert hashed_instance 
+            @table.insert(hashed_instance)
+        end      
+
+        def ORM_get_entry id
+            @table.entries.detect { |entry| entry[:id] == id }
+        end
+
+        def ORM_delete_entry id
+            @table.delete id
+        end
+
+        def ORM_wipe_references_to type, id # acá se recibe todo id que haya sido borrado de la tabla de su clase, cuya clase forme parte de una composición con esta clase receptora
+            (@persistible_attrs.select { |attr| attr[:type] == type }).each do |attr|
+                if attr[:multiple] # si es composición multiple se borran las entries correspondientes en la tabla de la relación entre las dos clases
+                    ((ORM_attr_table attr[:name]).entries.select { |entry| entry[('id_' + attr[:name].to_s).to_sym] == id }).each do |entry|
+                        (ORM_attr_table attr[:name]).delete entry[:id]
+                    end
+                else # si es composición simple, se debe traer el objeto a memoria, setear el atributo en nil, y darle save! de nuevo
+                    intances_to_update = send ('find_by_' + attr[:name].to_s).to_sym, id
+                    intances_to_update.each do |instance|
+                        instance.send (attr[:name].to_s + '=').to_sym, nil
+                        instance.save!
+                    end
+                end
+            end
+        end
+
+        def ORM_attr_table attr_name_symbol # getter de la tabla correspondiente a una relación por has_many
+            TADB::DB.table(name + '__' + attr_name_symbol.to_s)
+        end
+    end
 end
 
 
@@ -189,8 +225,12 @@ module CosasTesting
         has_one Numeric, named: :value
     end
 
-    class Student
+    module Person
         has_one String, named: :full_name
+    end
+
+    class Student
+        include Person
         has_one DNI, named: :dni
         has_many Grade, named: :grades
     end
