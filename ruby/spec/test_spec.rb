@@ -315,11 +315,71 @@ describe "Persistencia de objetos sencillos" do
       jose.refresh!
       expect(jose.nota.valor).to eq 4
     end
+
+    it 'Un objeto compuesto con un objeto no tiene la referencia a este cuando se borra' do
+      leo = Estudiante.new
+      leo.nombre = "leo sbaraglia"
+      leo.nota = Nota.new
+      leo.nota.valor = 8
+      leo.save!
+      leo.nota.forget!
+      leo.refresh!
+      expect(leo.nota).to eq nil
+    end
   end
 
   describe 'Composicion con multiples objetos' do
+    class Alumno
+      has_one String, named: :nombre
+      has_many Nota, named: :notas
+    end
 
+    it 'un objeto con un atributo compuestos con multiples objetos sin asignar devuelve una lista vacia' do
+      tomas = Alumno.new
+      tomas.nombre = "tomas sbaraglia"
+      expect(tomas.notas).to eq []
+    end
 
+    it 'Un objeto con atributo compuestos con multiples objetos devuelve la lista de objetos' do
+      guido = Alumno.new
+      unaNota = Nota.new
+      otraNota = Nota.new
+      guido.notas.push(unaNota)
+      guido.notas.last.valor = 8
+      guido.notas.push(otraNota)
+      guido.notas.last.valor = 5
+      guido.save!
+      expect(guido.notas).to eq [unaNota, otraNota]
+    end
+
+    it 'Un objeto con atributo compuestos con multiples objetos refrescados devuelve la lista de objetos guardada' do
+      guido = Alumno.new
+      unaNota = Nota.new
+      otraNota = Nota.new
+      guido.notas.push(unaNota)
+      guido.notas.last.valor = 8
+      guido.notas.push(otraNota)
+      guido.notas.last.valor = 5
+      guido.save!
+      guido.notas.push(Nota.new)
+      guido.refresh!
+      expect(guido.notas.map{|x| x.id}).to eq [unaNota.id, otraNota.id]
+    end
+
+    it 'Un objeto compuesto con otros objetos no tiene la referencia a esos objetos cuando se borran' do
+      guido = Alumno.new
+      unaNota = Nota.new
+      otraNota = Nota.new
+      guido.notas.push(unaNota)
+      guido.notas.last.valor = 8
+      guido.notas.push(otraNota)
+      guido.notas.last.valor = 5
+      guido.save!
+      unaNota.forget!
+      otraNota.forget!
+      guido.refresh!
+      expect(guido.notas.empty?).to eq true
+    end
 
   end
 
