@@ -62,7 +62,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 id_pair_hashed[('id_' + self.class.name).to_sym] = @id
                 (send attr[:name]).each do |elem|
                     id_pair_hashed[('id_' + attr[:name].to_s).to_sym] = elem.save!
-                    (attr_table attr[:name]).insert id_pair_hashed
+                    (self.class.send :ORM_attr_table, attr[:name]).insert id_pair_hashed
                 end
             end
             return @id
@@ -80,7 +80,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 send (attr[:name].to_s + '=').to_sym, attr_final_value # seteo cada atributo con el valor dado por la entry de la tabla
             end
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
-                matching_entries = ((attr_table attr[:name]).entries.select { |entry| entry[('id_' + self.class.name).to_sym] == @id })
+                matching_entries = ((self.class.send :ORM_attr_table, attr[:name]).entries.select { |entry| entry[('id_' + self.class.name).to_sym] == @id })
                 elem_enum = matching_entries.map do |entry|
                     (attr[:type].find_by_id entry[('id_' + attr[:name].to_s).to_sym])[0]
                 end
@@ -98,9 +98,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             @id = nil # si no hago esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! puede romper
         end
 
-        def attr_table attr_name_symbol 
-            TADB::DB.table(self.class.name + '__' + attr_name_symbol.to_s)
-        end
 
         def exception_if_no_id
             if not @id then raise 'this instance is not persisted' end # TODO armar excepciones decentes
@@ -132,11 +129,14 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def ORM_wipe_references_to type, id
             (@persistible_attrs.select { |attr| attr[:type] == type }).each do |attr|
                 if attr[:multiple]
-                    # TODO
+                    ((ORM_attr_table attr[:name]).entries.select { |entry| entry[('id_' + attr[:name].to_s).to_sym] == id }).each do |entry|
+                        (ORM_attr_table attr[:name]).delete entry[:id]
+                    end
                 else
                     intances_to_update = send ('find_by_' + attr[:name].to_s).to_sym, id
                     intances_to_update.each do |instance|
-                        # TODO
+                        instance.send (attr[:name].to_s + '=').to_sym, nil
+                        instance.save!
                     end
                 end
             end
@@ -144,6 +144,10 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def ORM_add_deletion_observer a_class
             @deletion_observers << a_class
+        end
+
+        def ORM_attr_table attr_name_symbol 
+            TADB::DB.table(name + '__' + attr_name_symbol.to_s)
         end
 
         def all_instances 
@@ -172,7 +176,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end 
         end
 
-        private :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_notify_deletion, :ORM_wipe_references_to, :ORM_add_deletion_observer
+        private :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_notify_deletion, :ORM_wipe_references_to, :ORM_add_deletion_observer, :ORM_attr_table
     end
 end
 
