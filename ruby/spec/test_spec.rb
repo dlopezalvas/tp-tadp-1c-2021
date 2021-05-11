@@ -148,6 +148,58 @@ describe "Persistencia de objetos sencillos" do
       paulina.save!
       expect(Golondrina.all_instances.size).to eq 2
     end
+  end
+
+  describe 'find_by_<what>' do
+    class Student
+      has_one String, named: :full_name
+      has_one Numeric, named: :grade
+
+      def promoted
+        self.grade > 8
+      end
+
+      def has_last_name(last_name)
+        self.full_name.split(' ')[1] === last_name
+      end
+
+    end
+
+    it 'No se puede buscar un objeto con un metodo especifico que recibe argumentos' do
+      TADB::DB.clear_all()
+      nahuel = Student.new
+      nahuel.full_name = "Nahuel Rodriguez"
+      nahuel.save!
+      expect{Student.find_by_has_last_name ("Rodriguez")}.to raise_error NoMethodError
+    end
+
+    it 'Se puede buscar un objeto con un metodo especifico' do
+      TADB::DB.clear_all()
+      nahuel = Student.new
+      nahuel.full_name = "Nahuel Rodriguez"
+      nahuel.save!
+      expect((Student.find_by_full_name("Nahuel Rodriguez")).first.id).to eq (nahuel.id)
+    end
+
+    it 'Se puede buscar varios objetos con un metodo especifico' do
+      TADB::DB.clear_all()
+      nahuel = Student.new
+      nahuel.grade = 7
+      nahuel.save!
+      dani = Student.new
+      dani.grade = 7
+      dani.save!
+      mica = Student.new
+      mica.grade = 8
+      mica.save!
+      expect((Student.find_by_grade (7)).size).to eq 2
+    end
+
+    it 'No se puede buscar por un metodo que no existe' do
+      TADB::DB.clear_all()
+      nahuel = Student.new
+      expect{Student.find_by_address "calle falsa 123"}.to raise_error NoMethodError
+    end
 
   end
 end
