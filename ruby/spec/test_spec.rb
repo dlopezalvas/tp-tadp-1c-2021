@@ -12,6 +12,8 @@ class Grade
   has_one Numeric, named: :value   # Pero ahora es Numeric
 end
 
+
+
 describe "Persistencia de objetos sencillos" do
   let(:persona) { Person.new }
 
@@ -40,13 +42,28 @@ describe "Persistencia de objetos sencillos" do
       persona.first_name = "raul"
       persona.last_name = "porcheto"
       persona.save!
-      expect(persona.id.class).to be String
+      expect(persona.id).not_to be nil
     end
 
     it 'un objeto persistible sin guardar no tiene un @id' do
       persona.first_name = "raul"
       persona.last_name = "porcheto"
       expect{persona.id}.to raise_error NoMethodError
+    end
+
+    it 'un objeto persistible sin datos puede ser guardado' do
+      carlos = Person.new
+      carlos.save!
+      expect(carlos.id).not_to be nil
+    end
+
+    it 'al guardar un objeto persistible que ya habia sido borrado adquiere un atributo persistible @id' do
+      persona.first_name = "raul"
+      persona.last_name = "porcheto"
+      persona.save!
+      persona.forget!
+      persona.save!
+      expect(persona.id).not_to be nil
     end
   end
 
@@ -73,5 +90,64 @@ describe "Persistencia de objetos sencillos" do
       persona.forget!
       expect{persona.refresh!}.to raise_error 'this instance is not persisted' #TODO ver de cambiar cuando se hagan excepciones decentes (?)
     end
+  end
+
+  describe 'all_instances' do
+    class Golondrina
+      has_one String, named: :nombre
+    end
+    class Pajaro
+      has_one String, named: :nombre
+    end
+
+    it 'una clase sin objetos pesistidos devuelve un array vacio' do
+      TADB::DB.clear_all()
+      expect(Golondrina.all_instances).to eq []
+    end
+
+    it 'una clase con un objeto persistido y uno no persistido devuelve ese objeto' do
+      TADB::DB.clear_all()
+      pepita = Golondrina.new
+      pepita.nombre = "pepita"
+      pepita.save!
+      jorge = Golondrina.new
+      jorge.nombre = "jorge"
+      expect(Golondrina.all_instances.first.id).to eq pepita.id
+    end
+
+    it 'al borrar un objeto persistido, este deja de pertenecer a la lista de instacias persistidas' do
+      TADB::DB.clear_all()
+      jorge = Golondrina.new
+      jorge.nombre = "jorge"
+      jorge.save!
+      jorge.forget!
+      expect(Golondrina.all_instances).to eq []
+    end
+
+    it 'un objeto persistidos que fue borrado y guardado de nuevo pertenece a la lista de instacias persistidas' do
+      TADB::DB.clear_all()
+      jorge = Golondrina.new
+      jorge.nombre = "jorge"
+      jorge.save!
+      jorge.forget!
+      jorge.save!
+      expect(Golondrina.all_instances.first.id).to eq jorge.id
+    end
+
+    it 'una clase con 2 objetos persistidos y un objeto persistido borrado tiene dos instancias pesistidas' do
+      TADB::DB.clear_all()
+      jorge = Golondrina.new
+      jorge.nombre = "jorge"
+      jorge.save!
+      jorge.forget!
+      pepita = Golondrina.new
+      pepita.nombre = "pepita"
+      pepita.save!
+      paulina = Golondrina.new
+      paulina.nombre = "paulina"
+      paulina.save!
+      expect(Golondrina.all_instances.size).to eq 2
+    end
+
   end
 end
