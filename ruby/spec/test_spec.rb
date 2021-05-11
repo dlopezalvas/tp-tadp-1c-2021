@@ -12,8 +12,6 @@ class Grade
   has_one Numeric, named: :value   # Pero ahora es Numeric
 end
 
-
-
 describe "Persistencia de objetos sencillos" do
   let(:persona) { Person.new }
 
@@ -30,6 +28,11 @@ describe "Persistencia de objetos sencillos" do
       persona.address = "Av. San Martin 2567"
       expect(persona.address.class).to be String
     end
+
+    it 'un objeto no persistible no entiende los mensajes de los objetos persisitibles' do
+      object = Object.new
+      expect{object.save!}.to raise_error NoMethodError
+    end
   end
 
   describe 'save!' do
@@ -44,6 +47,21 @@ describe "Persistencia de objetos sencillos" do
       persona.first_name = "raul"
       persona.last_name = "porcheto"
       expect{persona.id}.to raise_error NoMethodError
+    end
+  end
+
+  describe 'refresh!' do
+    it 'al refrescar un objeto al que se le cambio el valor del atributo, su valor vuelve al guardado' do #TODO ver nombre por otro mas lindo gg
+      persona.first_name = "jose"
+      persona.save!
+      persona.first_name = "pepe"
+      persona.refresh!
+      expect(persona.first_name).to eq "jose"
+    end
+
+    it 'no se puede refrescar un objeto sin id' do
+      objeto = Person.new
+      expect{objeto.refresh!}.to raise_error 'this instance is not persisted' #TODO ver de cambiar cuando se hagan excepciones decentes (?)
     end
   end
 end
