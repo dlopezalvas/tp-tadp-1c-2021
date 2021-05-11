@@ -255,7 +255,7 @@ describe "Persistencia de objetos sencillos" do
       expect(juan.nota.valor).to eq 9
     end
 
-    it 'El atributo compuesto puede ser actualizado desde afuera del objeto' do #TODO ver por que no anda
+    it 'El atributo compuesto puede ser actualizado desde afuera del objeto' do
       jose = Estudiante.new
       jose.nombre = "jose sbaraglia"
       nota = Nota.new
@@ -265,6 +265,7 @@ describe "Persistencia de objetos sencillos" do
       jose.nota = Nota.new
       jose.nota.valor = 9
       nota.valor = 2
+      nota.save!
       jose.refresh!
       expect(jose.nota.valor).to eq 2
     end
