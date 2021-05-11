@@ -47,7 +47,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             else    
                 define_singleton_method(:id) { @id } # TODO el getter se lo damos en la singleton sólo a los que están persistidos; consultar si está bien
             end
+
             self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
+            self.validate!
             ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] or ((send attr[:name]) == nil)}).each do |attr|
                 attr_value = send attr[:name]
                 if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
@@ -95,6 +97,17 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.class.send :ORM_delete_entry, @id
             singleton_class.remove_method :id
             @id = nil # si no se hace esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! puede romper
+        end
+
+        def validate!
+            ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] or attr[:name] == :id}).each do |attr|
+                attr_value = self.send attr[:name]
+                puts(attr[:type].to_s)
+                puts(attr_value)
+                if(!(attr_value.is_a? attr[:type]))
+                    raise 'The instance has invalid values'
+                end
+            end
         end
 
         def exception_if_no_id

@@ -8,13 +8,13 @@ class Person
 end
 
 class Grade
-  has_one String, named: :value    # Hasta acá :value es un String
+  has_one String, named: :value    # Hasta acÃ¡ :value es un String
   has_one Numeric, named: :value   # Pero ahora es Numeric
 end
 
 
 
-describe "Persistencia de objetos sencillos" do
+describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
   let(:persona) { Person.new }
 
   after do
@@ -97,6 +97,7 @@ describe "Persistencia de objetos sencillos" do
   end
 
   describe 'all_instances' do
+
     class Golondrina
       has_one String, named: :nombre
     end
@@ -105,12 +106,10 @@ describe "Persistencia de objetos sencillos" do
     end
 
     it 'una clase sin objetos pesistidos devuelve un array vacio' do
-      TADB::DB.clear_all()
       expect(Golondrina.all_instances).to eq []
     end
 
     it 'una clase con un objeto persistido y uno no persistido devuelve ese objeto' do
-      TADB::DB.clear_all()
       pepita = Golondrina.new
       pepita.nombre = "pepita"
       pepita.save!
@@ -120,7 +119,6 @@ describe "Persistencia de objetos sencillos" do
     end
 
     it 'al borrar un objeto persistido, este deja de pertenecer a la lista de instacias persistidas' do
-      TADB::DB.clear_all()
       jorge = Golondrina.new
       jorge.nombre = "jorge"
       jorge.save!
@@ -129,7 +127,6 @@ describe "Persistencia de objetos sencillos" do
     end
 
     it 'un objeto persistidos que fue borrado y guardado de nuevo pertenece a la lista de instacias persistidas' do
-      TADB::DB.clear_all()
       jorge = Golondrina.new
       jorge.nombre = "jorge"
       jorge.save!
@@ -139,7 +136,6 @@ describe "Persistencia de objetos sencillos" do
     end
 
     it 'una clase con 2 objetos persistidos y un objeto persistido borrado tiene dos instancias pesistidas' do
-      TADB::DB.clear_all()
       jorge = Golondrina.new
       jorge.nombre = "jorge"
       jorge.save!
@@ -170,7 +166,6 @@ describe "Persistencia de objetos sencillos" do
     end
 
     it 'No se puede buscar un objeto con un metodo especifico que recibe argumentos' do
-      TADB::DB.clear_all()
       nahuel = Student.new
       nahuel.full_name = "Nahuel Rodriguez"
       nahuel.save!
@@ -178,7 +173,6 @@ describe "Persistencia de objetos sencillos" do
     end
 
     it 'Se puede buscar un objeto con un metodo especifico' do
-      TADB::DB.clear_all()
       nahuel = Student.new
       nahuel.full_name = "Nahuel Rodriguez"
       nahuel.save!
@@ -186,7 +180,6 @@ describe "Persistencia de objetos sencillos" do
     end
 
     it 'Se puede buscar varios objetos con un metodo especifico' do
-      TADB::DB.clear_all()
       nahuel = Student.new
       nahuel.grade = 7
       nahuel.save!
@@ -200,8 +193,6 @@ describe "Persistencia de objetos sencillos" do
     end
 
     it 'No se puede buscar por un metodo que no existe' do
-      TADB::DB.clear_all()
-      nahuel = Student.new
       expect{Student.find_by_address "calle falsa 123"}.to raise_error NoMethodError
     end
 
@@ -284,20 +275,20 @@ describe "Persistencia de objetos sencillos" do
       expect(juani.nota.valor).to eq 10
     end
 
-      it 'El atributo compuesto puede ser refrescado desde otro objeto' do
-        pepito = Estudiante.new
-        juani = Estudiante.new
-        juani.nombre = "juani sbaraglia"
-        juani.nota = Nota.new
-        juani.nota.valor = 5
-        juani.save!
-        pepito.nota = juani.nota
-        pepito.nota.valor = 6
-        pepito.save!
-        juani.nota.valor = 4
-        juani.save!
-        pepito.refresh!
-        expect(pepito.nota.valor).to eq 4
+    it 'El atributo compuesto puede ser refrescado desde otro objeto' do
+      pepito = Estudiante.new
+      juani = Estudiante.new
+      juani.nombre = "juani sbaraglia"
+      juani.nota = Nota.new
+      juani.nota.valor = 5
+      juani.save!
+      pepito.nota = juani.nota
+      pepito.nota.valor = 6
+      pepito.save!
+      juani.nota.valor = 4
+      juani.save!
+      pepito.refresh!
+      expect(pepito.nota.valor).to eq 4
     end
 
 
@@ -381,6 +372,23 @@ describe "Persistencia de objetos sencillos" do
       expect(guido.notas.empty?).to eq true
     end
 
+  end
+
+  describe 'validate!' do
+
+    it 'No se puede guardar un objeto persistente con un valor de tipo diferente al declarado para un objeto con atributos simples' do
+      juan = Student.new
+      juan.full_name = 5
+      expect{juan.save!}.to raise_error 'The instance has invalid values'
+    end
+
+    it 'Se puede guardar un objeto persistente si los tipos coinciden' do
+      cande = Student.new
+      cande.full_name = "Cande Sierra"
+      cande.grade = 5.5
+      cande.save!
+      expect(cande.id).not_to eq nil
+    end
   end
 
 end
