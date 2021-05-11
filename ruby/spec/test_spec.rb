@@ -383,11 +383,33 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     end
 
     it 'Se puede guardar un objeto persistente si los tipos coinciden' do
-      cande = Student.new
-      cande.full_name = "Cande Sierra"
-      cande.grade = 5.5
+      cande = Estudiante.new
+      cande.nombre = "Cande Sierra"
+      cande.nota = Nota.new
+      cande.nota.valor = 10
       cande.save!
       expect(cande.id).not_to eq nil
+    end
+
+    it 'No se puede guardar un objeto persistente con composición si los tipos no coinciden' do
+      tom = Estudiante.new
+      tom.nombre = "Thomas Marlow"
+      tom.nota = Nota.new
+      tom.nota.valor = "Diez"
+      expect{tom.save!}.to raise_error 'The instance has invalid values'
+    end
+
+    it 'asdfasdf' do
+      ara = Alumno.new
+      ara.nombre = "Ara"
+      unaNota = Nota.new
+      otraNota = Nota.new
+      ara.notas.push(unaNota)
+      ara.notas.last.valor = 8
+      ara.notas.push(otraNota)
+      ara.notas.last.valor = 5
+      ara.save!
+      expect(ara.id).not_to eq nil
     end
   end
 

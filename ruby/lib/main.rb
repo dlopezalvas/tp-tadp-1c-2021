@@ -15,7 +15,7 @@ class Module
             @table = TADB::DB.table(name)
         end
         attr_name = description[:named]
-        @persistible_attrs.delete_if { |attr| attr[:name] == attr_name } 
+        @persistible_attrs.delete_if { |attr| attr[:name] == attr_name }
         @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple} # @persistible_attrs sería como la metadata de la @table del módulo
         attr_accessor attr_name # define getters+setters para los objetos
     end
@@ -29,7 +29,7 @@ class Module
     end
 
     private :ORM_add_persistible_attr
-end 
+end
 
 
 module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la idea es no contaminar el namespace
@@ -42,9 +42,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def save!
-            if @id 
+            if @id
                 self.class.send :ORM_delete_entry, @id # TODO no estoy seguro de si esto es necesario
-            else    
+            else
                 define_singleton_method(:id) { @id } # TODO el getter se lo damos en la singleton sólo a los que están persistidos; consultar si está bien
             end
 
@@ -101,12 +101,28 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def validate!
             ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] or attr[:name] == :id}).each do |attr|
-                attr_value = self.send attr[:name]
+                attr_value = send attr[:name]
                 puts(attr[:type].to_s)
                 puts(attr_value)
-                if(!(attr_value.is_a? attr[:type]))
-                    raise 'The instance has invalid values'
+                exception_if_invalid_values(!(attr_value.is_a? attr[:type]))
+            end
+
+            ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple]}).each do |attr|
+                attr_value = send attr[:name]
+                puts(attr[:type].to_s)
+
+                attr_value.each do |elem|
+                    puts(elem.to_s)
+                    puts(attr_value[:type].to_s)
+                    exception_if_invalid_values(!(elem.is_a? attr_value[:type]))
                 end
+
+                exception_if_invalid_values(!(attr_value.is_a? attr[:type]))
+            end
+        end
+
+        def exception_if_invalid_values(condition)
+            if condition then raise 'The instance has invalid values'
             end
         end
 
@@ -119,9 +135,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
-        def ORM_insert hashed_instance 
+        def ORM_insert hashed_instance
             @table.insert(hashed_instance)
-        end      
+        end
 
         def ORM_get_entry id
             @table.entries.detect { |entry| entry[:id] == id }
@@ -161,7 +177,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             TADB::DB.table(name + '__' + attr_name_symbol.to_s)
         end
 
-        def all_instances 
+        def all_instances
             instantiate @table.entries
         end
 
@@ -184,7 +200,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 instance.id = entry[:id]
                 instance.singleton_class.remove_method(:id=) # este método se lo dábamos sólo para setearle el id acá adentro
                 instance.refresh! # TODO teniendo el id bien, refresh trae el resto de los datos (para no repetir lógica); no es muy performante igual porque el refresh implica una búsqueda en la tabla cuando la información ya la tenemos en la entry. habría que optimizar sin repetir lógica
-            end 
+            end
         end
 
         private :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_notify_deletion, :ORM_wipe_references_to, :ORM_add_deletion_observer, :ORM_attr_table
