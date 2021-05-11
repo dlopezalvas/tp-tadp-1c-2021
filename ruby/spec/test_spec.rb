@@ -209,13 +209,13 @@ describe "Persistencia de objetos sencillos" do
 
   describe 'Composicion con un unico objeto' do
 
-    class Estudiante
-      has_one String, named: :nombre
-      has_one Grade, named: :nota
-    end
-
     class Nota
       has_one Numeric, named: :valor
+    end
+
+    class Estudiante
+      has_one String, named: :nombre
+      has_one Nota, named: :nota
     end
 
     it 'El atributo compuesto devuelve el objeto' do
@@ -227,7 +227,7 @@ describe "Persistencia de objetos sencillos" do
       expect(leo.nota.valor).to eq 8
     end
 
-    it 'El atributo compuesto refrescado tiene el valor guardado' do #TODO ver por que falla
+    it 'El atributo compuesto refrescado tiene el valor guardado' do
       juan = Estudiante.new
       juan.nombre = "juan sbaraglia"
       juan.nota = Nota.new
@@ -237,6 +237,22 @@ describe "Persistencia de objetos sencillos" do
       juan.nota.valor = 9
       juan.refresh!
       expect(juan.nota.valor).to eq 8
+    end
+
+    it 'El atributo compuesto se puede borrar y volver a guardar' do
+      juan = Estudiante.new
+      juan.nombre = "juan sbaraglia"
+      juan.nota = Nota.new
+      juan.nota.valor = 8
+      juan.save!
+      juan.forget!
+      juan.nota = Nota.new
+      juan.nota.valor = 9
+      juan.save!
+      juan.nota = Nota.new
+      juan.nota.valor = 10
+      juan.refresh!
+      expect(juan.nota.valor).to eq 9
     end
 
   end
