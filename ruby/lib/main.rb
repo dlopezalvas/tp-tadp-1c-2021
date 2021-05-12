@@ -11,12 +11,12 @@ class Module
             extend ORM::PersistibleModule # así el módulo/clase soporta persistencia (tiene tabla, atributos persistibles, etc.)
             prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
             @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
-            @persistible_attrs = [{name: :id, type: String, multiple: false, blank: description[:no_blank]}] # la metadata de cada columna de la tabla
+            @persistible_attrs = [{name: :id, type: String, multiple: false, blank: description[:no_blank], from: description[:from]}] # la metadata de cada columna de la tabla
             @table = TADB::DB.table(name)
         end
         attr_name = description[:named]
         @persistible_attrs.delete_if { |attr| attr[:name] == attr_name }
-        @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple, blank: description[:no_blank]} # @persistible_attrs sería como la metadata de la @table del módulo
+        @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple, blank: description[:no_blank], from: description[:from]} # @persistible_attrs sería como la metadata de la @table del módulo
         attr_accessor attr_name # define getters+setters para los objetos
     end
 
@@ -105,15 +105,17 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 if attr[:blank]
                     validate_blank(attr_value)
                 end
+
+                if attr[:from] and attr_value.is_a? Numeric
+                    validate_from(attr[:from], attr_value)
+                end
+
                 exception_if_invalid_values(!(attr_value == nil or attr_value.is_a? attr[:type]))
             end
 
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple]}).each do |attr|
                 attr_value = send attr[:name]
                 attr_value.each do |elem|
-                    if attr[:blank]
-                        validate_blank(attr_value)
-                    end
                     if elem.class.ancestors.include? PersistibleObject then elem.validate! end
                 end
             end
@@ -121,6 +123,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def validate_blank(value)
             if value.nil? || value.empty? then raise 'The instance can not be nil nor empty'
+            end
+        end
+
+        def validate_from(min, value)
+            if value < min then raise 'The instance can not be smaller than the minimum required'
             end
         end
 

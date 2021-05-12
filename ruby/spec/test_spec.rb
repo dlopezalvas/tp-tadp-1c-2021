@@ -445,6 +445,26 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       juancito.save!
       expect(juancito.id).not_to eq nil
     end
+  end
 
+  describe 'Validacion from' do
+    class Bird
+      has_one Numeric, named: :age, from: 5
+    end
+
+    it 'No se puede guardar un objeto si tiene un valor menor al minimo requerido' do
+      nala = Bird.new
+      nala.name = "Nala"
+      nala.age = 2
+      expect{nala.save!}.to raise_error 'The instance can not be smaller than the minimum required'
+    end
+
+    it 'Se puede guardar un objeto si tiene un valor mayor al minimo requerido' do
+      alekai = Bird.new
+      alekai.name = "Alekai"
+      alekai.age = 6
+      alekai.save!
+      expect(alekai.id).not_to eq nil
+    end
   end
 end
