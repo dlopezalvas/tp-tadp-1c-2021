@@ -46,7 +46,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     module PersistibleObject # esto es sólo para objetos; todo lo estático está en PersistibleModule
         def initialize *args
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
-                send (attr[:name].to_s + '=').to_sym, [] # todo esto es sólo para inicializar las listas persistibles
+                if (send attr[:name]) == nil
+                    send (attr[:name].to_s + '=').to_sym, [] # todo esto es sólo para inicializar las listas persistibles
+                end
             end
             super *args
         end
@@ -199,7 +201,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def ORM_notify_deletion id # para notificar a las clases (observers) que se borró un id; para mantener consistencia
-            @deletion_observers.each do |observer|
+            ORM_get_all_deletion_observers.each do |observer|
                 observer.send :ORM_wipe_references_to, self, id
             end
         end
@@ -208,7 +210,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             @deletion_observers << a_class
         end
 
-        def all_instances # TODO delegar por herencia; los módulos no tienen tabla
+        def all_instances
             instances = []
             @descendants.each do |descendant|
                 instances += descendant.all_instances
@@ -239,7 +241,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        private :instantiate, :ORM_notify_deletion, :ORM_add_deletion_observer
+        private :instantiate, :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_description
     end
 
 
@@ -311,6 +313,12 @@ module CosasTesting
     end
 
     class Ayu < Student
+        def initialize
+            g = Grade.new
+            g.value = 5
+            @grades=[g]
+            super
+        end
     end
 
     module Person
