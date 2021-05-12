@@ -33,7 +33,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
       object = Empty.new
       object.address = "Av. San Martin 2567"
-      expect(object1422222222.address.class).to be String
+      expect(object.address.class).to be String
     end
 
     it 'un objeto no persistible no entiende los mensajes de los objetos persisitibles' do
@@ -56,9 +56,10 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       expect{persona.id}.to raise_error NoMethodError
     end
 
-    it 'un objeto persistible sin datos no puede ser guardado' do
+    it 'un objeto persistible sin datos puede ser guardado' do
       carlos = Person.new
-      expect { carlos.save!}.to raise_error 'The instance has invalid values'
+      carlos.save!
+      expect(carlos.id).not_to eq nil
     end
 
     it 'al guardar un objeto persistible que ya habia sido borrado adquiere un atributo persistible @id' do
