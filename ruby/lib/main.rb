@@ -110,14 +110,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple]}).each do |attr|
                 attr_value = send attr[:name]
                 puts(attr[:type].to_s)
+                puts(attr_value.to_s)
 
                 attr_value.each do |elem|
-                    puts(elem.to_s)
-                    puts(attr_value[:type].to_s)
-                    exception_if_invalid_values(!(elem.is_a? attr_value[:type]))
+                    if elem.class.ancestors.include? PersistibleObject then elem.validate! end
                 end
-
-                exception_if_invalid_values(!(attr_value.is_a? attr[:type]))
             end
         end
 
