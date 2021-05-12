@@ -126,14 +126,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 attr_value = send attr[:name]
                 #TODO ver condiciones con has_many
                 attr_value.each do |elem|
+                    if attr[:validate] #TODO ver si deberia funciona con elementos no persistibles
+                        validate_block(elem, &attr[:validate])
+                    end
                     if elem.class.ancestors.include? PersistibleObject
-                        if attr[:validate]
-                            validate_block(elem, &attr[:validate])
-                        end
                         elem.validate!
-                    else if attr[:validate] #TODO ver si deberia funcionar con elementos que no sean persistibles
-                             validate_block(elem, &attr[:validate])
-                         end
                     end
                 end
             end
