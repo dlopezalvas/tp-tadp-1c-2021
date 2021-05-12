@@ -428,6 +428,16 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       has_one String, named: :name, no_blank: true
     end
 
+    class Nombre
+      has_one String, named: :name
+    end
+
+    class Birds
+      has_many Nombre, named: :names, no_blank: true
+    end
+
+
+
     it 'No se puede guardar un objeto si tiene un atirbuto vacío' do
       juancito = Bird.new
       juancito.name = ""
@@ -445,6 +455,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       juancito.save!
       expect(juancito.id).not_to eq nil
     end
+
   end
 
   describe 'Validacion from' do
@@ -482,16 +493,24 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     end
 
     class Cat
-      has_many Toy, named: :toys
+      has_many Toy, named: :toys, validate: proc{name.length > 4}
     end
 
-    it 'Se puede guardar un objeto si cumple con la condición del bloque' do
+    it 'Se puede guardar un objeto con composicion simple si cumple con la condición del bloque' do
       mora = Cat.new
       voleyball = Toy.new
       voleyball.name = "Voleyball ball"
       mora.toys.push(voleyball)
       mora.save!
       expect(mora.id).not_to eq nil
+    end
+
+    it 'No se puede guardar un objeto con composicion simple si no cumple con la condición del bloque' do
+      mora = Cat.new
+      ball = Toy.new
+      ball.name = "Ball"
+      mora.toys.push(ball)
+      expect {mora.save!}.to raise_error 'The instance has invalid values'
     end
 
     it 'No se puede guardar un objeto si no cumple con la condición del bloque' do
@@ -505,5 +524,16 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       expect {mora.save!}.to raise_error 'The instance has invalid values'
     end
 
+    it 'Se puede guardar un objeto compuesto si cumple con la condición del bloque' do
+      mora = Cat.new
+      ball = Toy.new
+      voleyball = Toy.new
+      voleyball.name = "Voleyball ball"
+      ball.name = "Balls"
+      mora.toys.push(ball)
+      mora.toys.push(voleyball)
+      mora.save!
+      expect(mora.id).not_to eq nil
+    end
   end
 end
