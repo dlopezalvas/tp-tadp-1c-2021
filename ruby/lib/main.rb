@@ -1,6 +1,7 @@
 require 'tadb'
 
-# TODO abstraer transformaciones de símbolos
+# TODO importante: Ayu no tiene comportamiento de persistible
+# TODO menor: abstraer transformaciones de símbolos
 
 class Module
     def ORM_add_persistible_attr type, description, is_multiple: # TODO está bien poner esto acá? quizás sea mejor que esté en PersistibleModule
@@ -48,7 +49,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             super *args
         end
-
 
         def save!
             if @id 
@@ -121,11 +121,17 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         # TODO armar un module a modo de namespace para los métodos ORM_*?
         def ORM_add_descendant descendant # TODO private
-            if not descendant.singleton_class.ancestors.include? PersistibleModule
+            return if not (descendant.singleton_class.ancestors & [PersistibleModule, PersistibleClass]).empty?
             @descendants << descendant
             @persistible_attrs.each do |attr|
-                descendant.send :ORM_add_persistible_attr, attr[:type], (ORM_get_description :attr), is_multiple: attr[:multiple]
+                descendant.send :ORM_add_persistible_attr, attr[:type], (ORM_get_description attr), is_multiple: attr[:multiple]
             end
+        end
+
+        def ORM_get_description attr # TODO private
+            description_hashed = {}
+            description_hashed[:named] = attr[:name]
+            description_hashed
         end
 
         def ORM_get_all_deletion_observers
@@ -142,15 +148,19 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             @deletion_observers << a_class
         end
 
-        def all_instances 
-            instantiate @table.entries
+        def all_instances # TODO delegar por herencia; los módulos no tienen tabla
+            instances = []
+            @descendants.each do |descendant|
+                instances += descendant.all_instances
+            end
+            instances
         end
 
         def method_missing symbol, *args, &block # para tratar con el requerimiento de find_by_<what>
             prefix = 'find_by_'
             query_attr = @persistible_attrs.detect { |attr| attr[:name].to_s == symbol.to_s[(prefix.length)..-1] } # buscamos el campo según el cual se filtra en la query
             if query_attr and symbol.to_s.start_with? prefix # si el campo existe y el prefijo es el correcto:
-                # TODO los módulos deben delegar a los descendants; las clases, eso y también buscar en su propia tabla
+                # TODO los módulos deben delegar a los descendants; las clases lo mismo pero también buscar en su propia tabla
                 # TODO no se está contemplando comparar por id para los atributos persistibles referenciados
                 instantiate @table.entries.select { |entry| entry[query_attr[:name]] == args[0] } # se instancian los que cumplen la condición
             else
@@ -169,12 +179,12 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end 
         end
 
-        private :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_notify_deletion, :ORM_wipe_references_to, :ORM_add_deletion_observer, :ORM_attr_table
+        private :instantiate, :ORM_notify_deletion, :ORM_add_deletion_observer
     end
 
 
     module PersistibleClass
-        extend PersistibleModule
+        include PersistibleModule
 
         def inherited descendant_class
             ORM_add_descendant descendant_class
@@ -211,6 +221,12 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def ORM_attr_table attr_name_symbol # getter de la tabla correspondiente a una relación por has_many
             TADB::DB.table(name + '__' + attr_name_symbol.to_s)
         end
+
+        def all_instances
+            super + (instantiate @table.entries)
+        end
+
+        private :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table
     end
 end
 
@@ -231,8 +247,14 @@ module CosasTesting
 
     class Student
         include Person
-        has_one DNI, named: :dni
         has_many Grade, named: :grades
+    end
+
+    class Ayu < Student
+    end
+
+    module Person
+        has_one DNI, named: :dni
     end
 end
 
