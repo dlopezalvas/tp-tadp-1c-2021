@@ -24,7 +24,7 @@ class Module
         @persistible_attrs.delete_if { |attr| attr[:name] == attr_name } 
         @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple} # @persistible_attrs sería como la metadata de la @table del módulo
         @descendants.each do |descendant|
-            descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO check que esta sintaxis esté bien para usar send
+            descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
         end
         attr_accessor attr_name # define getters+setters para los objetos
     end
@@ -121,7 +121,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         # TODO armar un module a modo de namespace para los métodos ORM_*?
         def ORM_add_descendant descendant # TODO private
-            return if not (descendant.singleton_class.ancestors & [PersistibleModule, PersistibleClass]).empty?
+            # return if (descendant.singleton_class.ancestors & [PersistibleModule, PersistibleClass]).empty?
             @descendants << descendant
             @persistible_attrs.each do |attr|
                 descendant.send :ORM_add_persistible_attr, attr[:type], (ORM_get_description attr), is_multiple: attr[:multiple]
