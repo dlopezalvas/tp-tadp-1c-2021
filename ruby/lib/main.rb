@@ -1,11 +1,12 @@
 require 'tadb'
 
-# TODO importante: Ayu no tiene comportamiento de persistible
-# TODO menor: abstraer transformaciones de símbolos
+# TODO find_by_<what> para composición
+# TODO abstraer transformaciones de símbolos
+# TODO abstraer todo lo posible juas
 
 class Module
     def ORM_add_persistible_attr type, description, is_multiple: # TODO está bien poner esto acá? quizás sea mejor que esté en PersistibleModule
-        if type.ancestors.include? ORM::PersistibleObject
+        if type.ancestors.include? ORM::PersistibleObject # TODO y si ese type se hace persistible más adelante?
             type.send :ORM_add_deletion_observer, self
         end
         if not @persistible_attrs
@@ -18,11 +19,11 @@ class Module
             end
             @descendants = []
             @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
-            @persistible_attrs = [{name: :id, type: String, multiple: false}] # la metadata de cada columna de la tabla
+            @persistible_attrs = [{name: :id, type: String, multiple: false, blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]}] # la metadata de cada columna de la tabla
         end
         attr_name = description[:named]
-        @persistible_attrs.delete_if { |attr| attr[:name] == attr_name } 
-        @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple} # @persistible_attrs sería como la metadata de la @table del módulo
+        @persistible_attrs.delete_if { |attr| attr[:name] == attr_name }
+        @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple, blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
         @descendants.each do |descendant|
             descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
         end
@@ -38,7 +39,7 @@ class Module
     end
 
     private :ORM_add_persistible_attr
-end 
+end
 
 
 module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la idea es no contaminar el namespace
@@ -51,12 +52,14 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def save!
-            if @id 
+            if @id
                 self.class.send :ORM_delete_entry, @id # TODO no estoy seguro de si esto es necesario
-            else    
+            else
                 define_singleton_method(:id) { @id } # TODO el getter se lo damos en la singleton sólo a los que están persistidos; consultar si está bien
             end
+
             self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
+            self.validate!
             ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] or ((send attr[:name]) == nil)}).each do |attr|
                 attr_value = send attr[:name]
                 if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
@@ -104,6 +107,63 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.class.send :ORM_delete_entry, @id
             singleton_class.remove_method :id
             @id = nil # si no se hace esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! puede romper
+        end
+
+        def validate!
+            ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] or attr[:name] == :id}).each do |attr|
+                attr_value = send attr[:name]
+                if attr[:blank]
+                    validate_blank(attr_value)
+                end
+
+                if attr_value.is_a? Numeric
+                    if attr[:from]
+                      validate_from(attr[:from], attr_value)
+                    end
+                    if attr[:to]
+                        validate_to(attr[:to], attr_value)
+                    end
+                end
+
+                if attr[:validate]
+                    validate_block(attr_value, &attr[:validate])
+                end
+
+                exception_if_invalid_values(!(attr_value == nil or attr_value.is_a? attr[:type]))
+            end
+
+            ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple]}).each do |attr|
+                attr_value = send attr[:name]
+                #TODO ver condiciones con has_many
+                attr_value.each do |elem|
+                    if elem.class.ancestors.include? PersistibleObject then elem.validate! end
+                end
+            end
+        end
+
+        def validate_blank(value)
+            if value.nil? || value.empty? then raise 'The instance can not be nil nor empty'
+            end
+        end
+
+        def validate_from(min, value)
+            if value < min then raise 'The instance can not be smaller than the minimum required'
+            end
+        end
+
+        def validate_to(max, value)
+            if value > max then raise 'The instance can not be bigger than the maximum required'
+            end
+        end
+
+        def validate_block(value, &block)
+            if not block.call(value) then raise 'The instance has invalid values'
+            end
+        end
+
+        def exception_if_invalid_values(condition)
+            if condition then raise 'The instance has invalid values'
+            end
         end
 
         def exception_if_no_id
@@ -176,7 +236,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 instance.id = entry[:id]
                 instance.singleton_class.remove_method(:id=) # este método se lo dábamos sólo para setearle el id acá adentro
                 instance.refresh! # TODO teniendo el id bien, refresh trae el resto de los datos (para no repetir lógica); no es muy performante igual porque el refresh implica una búsqueda en la tabla cuando la información ya la tenemos en la entry. habría que optimizar sin repetir lógica
-            end 
+            end
         end
 
         private :instantiate, :ORM_notify_deletion, :ORM_add_deletion_observer
