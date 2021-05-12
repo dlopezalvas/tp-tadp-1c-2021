@@ -408,7 +408,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       expect{tom.save!}.to raise_error 'The instance has invalid values'
     end
 
-    it 'asdfasdf' do
+    it 'Se puede guardar un objeto persistente con atributos complejos si los tipos coinciden' do
       ara = Alumno.new
       ara.nombre = "Ara"
       unaNota = Nota.new
@@ -420,6 +420,31 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       ara.save!
       expect(ara.id).not_to eq nil
     end
+
   end
 
+  describe 'Validacion no_blank' do
+    class Bird
+      has_one String, named: :name, no_blank: true
+    end
+
+    it 'No se puede guardar un objeto si tiene un atirbuto vacío' do
+      juancito = Bird.new
+      juancito.name = ""
+      expect{juancito.save!}.to raise_error 'The instance can not be nil nor empty'
+    end
+
+    it 'No se puede guardar un objeto si tiene un atirbuto nulo' do
+      juancito = Bird.new
+      expect{juancito.save!}.to raise_error 'The instance can not be nil nor empty'
+    end
+
+    it 'Se puede guardar un objeto si no tiene un atirbuto nulo' do
+      juancito = Bird.new
+      juancito.name = "Juancito De Las Nieves"
+      juancito.save!
+      expect(juancito.id).not_to eq nil
+    end
+
+  end
 end
