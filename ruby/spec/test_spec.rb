@@ -449,7 +449,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
   describe 'Validacion from' do
     class Bird
-      has_one Numeric, named: :age, from: 5
+      has_one Numeric, named: :age, from: 5, to: 20
     end
 
     it 'No se puede guardar un objeto si tiene un valor menor al minimo requerido' do
@@ -466,5 +466,44 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       alekai.save!
       expect(alekai.id).not_to eq nil
     end
+
+    it 'No se puede guardar un objeto si tiene un valor mayor al maximo requerido' do
+      olivia = Bird.new
+      olivia.name = "Olivia"
+      olivia.age = 50
+      expect{olivia.save!}.to raise_error 'The instance can not be bigger than the maximum required'
+    end
+  end
+
+  describe 'Validacion por bloque' do
+
+    class Toy
+      has_one String, named: :name
+    end
+
+    class Cat
+      has_many Toy, named: :toys
+    end
+
+    it 'Se puede guardar un objeto si cumple con la condición del bloque' do
+      mora = Cat.new
+      voleyball = Toy.new
+      voleyball.name = "Voleyball ball"
+      mora.toys.push(voleyball)
+      mora.save!
+      expect(mora.id).not_to eq nil
+    end
+
+    it 'No se puede guardar un objeto si no cumple con la condición del bloque' do
+      mora = Cat.new
+      ball = Toy.new
+      voleyball = Toy.new
+      voleyball.name = "Voleyball ball"
+      ball.name = "Ball"
+      mora.toys.push(ball)
+      mora.toys.push(voleyball)
+      expect {mora.save!}.to raise_error 'The instance has invalid values'
+    end
+
   end
 end
