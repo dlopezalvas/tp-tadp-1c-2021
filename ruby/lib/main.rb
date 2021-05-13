@@ -138,6 +138,18 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     if attr[:validate] #TODO ver si deberia funciona con elementos no persistibles
                         validate_block(elem, &attr[:validate])
                     end
+                    if attr[:blank]
+                        validate_blank(elem)
+                    end
+
+                    if elem.is_a? Numeric
+                        if attr[:from]
+                            validate_from(attr[:from], elem)
+                        end
+                        if attr[:to]
+                            validate_to(attr[:to], elem)
+                        end
+                    end
                     if elem.class.ancestors.include? PersistibleObject
                         elem.validate!
                     end
