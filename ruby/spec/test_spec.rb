@@ -428,12 +428,9 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       has_one String, named: :name, no_blank: true
     end
 
-    class Nombre
-      has_one String, named: :name
-    end
 
     class Birds
-      has_many Nombre, named: :names, no_blank: true
+      has_many String, named: :names, no_blank: true
     end
 
 
@@ -456,11 +453,60 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       expect(juancito.id).not_to eq nil
     end
 
+    it 'No se puede guardar una coleccion que tiene objetos vacíos o nil' do
+      juancito = Birds.new
+      juancito.names.push("Juan")
+      juancito.names.push("")
+      expect{juancito.save!}.to raise_error 'The instance can not be nil nor empty'
+    end
+
+    it 'No se puede guardar una coleccion que tiene objetos vacíos o nil' do
+      juancito = Birds.new
+      juancito.names.push("Juan")
+      juancito.names.push(nil)
+      expect{juancito.save!}.to raise_error 'The instance can not be nil nor empty'
+    end
+
+    it 'Se puede guardar una coleccion tiene que objetos vacíos o nil' do #TODO no pasa porque el save! no guarda objetos no persistibles
+      juancito = Birds.new
+      juancito.names.push("Juan")
+      juancito.names.push("Jorge")
+      juancito.save!
+      expect(juancito.id).not_to eq nil
+    end
+
+
   end
 
   describe 'Validacion from' do
     class Bird
       has_one Numeric, named: :age, from: 5, to: 20
+    end
+
+    class Dog
+      has_many Numeric, named: :numerosFavoritos, from:0, to:100
+    end
+
+    it 'No se puede guardar un obejeto si tiene una colecciones de objetos con valor menor al minimo requerido' do
+      tiff = Dog.new
+      tiff.numerosFavoritos.push(5)
+      tiff.numerosFavoritos.push(-2)
+      expect{tiff.save!}.to raise_error 'The instance can not be smaller than the minimum required'
+    end
+
+    it 'No se puede guardar un obejeto si tiene una colecciones de objetos con valor mayor al maximo requerido' do
+      tiff = Dog.new
+      tiff.numerosFavoritos.push(5)
+      tiff.numerosFavoritos.push(200)
+      expect{tiff.save!}.to raise_error 'The instance can not be bigger than the maximum required'
+    end
+
+    it 'Se puede guardar un objeto si una coleccion de objetos con valor mayor al minimo requerido' do #TODO no pasa porque no anda el save
+      tiff = Dog.new
+      tiff.numerosFavoritos.push(5)
+      tiff.numerosFavoritos.push(99)
+      tiff.save!
+      expect(tiff.id).not_to eq nil
     end
 
     it 'No se puede guardar un objeto si tiene un valor menor al minimo requerido' do
