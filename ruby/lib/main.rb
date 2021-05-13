@@ -201,7 +201,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def ORM_notify_deletion id # para notificar a las clases (observers) que se borró un id; para mantener consistencia
-            ORM_get_all_deletion_observers.each do |observer|
+            self.ORM_get_all_deletion_observers.each do |observer|
                 observer.send :ORM_wipe_references_to, self, id
             end
         end
@@ -222,9 +222,25 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             prefix = 'find_by_'
             query_attr = @persistible_attrs.detect { |attr| attr[:name].to_s == symbol.to_s[(prefix.length)..-1] } # buscamos el campo según el cual se filtra en la query
             if query_attr and symbol.to_s.start_with? prefix # si el campo existe y el prefijo es el correcto:
-                # TODO los módulos deben delegar a los descendants; las clases lo mismo pero también buscar en su propia tabla
-                # TODO no se está contemplando comparar por id para los atributos persistibles referenciados
-                instantiate @table.entries.select { |entry| entry[query_attr[:name]] == args[0] } # se instancian los que cumplen la condición
+                instances = []
+                @descendants.each do |descendant|
+                    instances += descendant.send symbol, *args, &block
+                end
+                if self.singleton_class.ancestors.include? PersistibleClass
+                    if query_attr[:multiple]
+                        ((ORM_attr_table query_attr[:name]).entries.select { |entry| entry[('id_' + name).to_sym] == id }).each do |entry|
+                            # TODO qué se compara? la lista entera? una selección de la lista? un sólo objeto de la lista? qué toma por parametro un find_by_<what> cuando se busca por un attr multiple?
+                        end
+                    else # TODO esto es un asco de nesteo y hay que refactorizar
+                        if args[0].class.ancestors.include? PersistibleObject
+                            comparison_value = args[0].id
+                        else
+                            comparison_value = args[0]
+                        end
+                        instances += instantiate @table.entries.select { |entry| entry[query_attr[:name]] == comparison_value }
+                    end
+                end
+                instances
             else
                 super # si no matchea, continúa el method lookup
             end
@@ -241,7 +257,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        private :instantiate, :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_description
+        private :instantiate, :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_description, :ORM_get_all_deletion_observers
     end
 
 
