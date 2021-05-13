@@ -3,6 +3,8 @@ require 'tadb'
 # TODO find_by_<what> para composición
 # TODO abstraer transformaciones de símbolos
 # TODO abstraer todo lo posible juas
+# TODO el save no updatea bien los has_many
+# TODO el forget no limpia las tablas de los has_many
 
 class Module
     def ORM_add_persistible_attr type, description, is_multiple: # TODO está bien poner esto acá? quizás sea mejor que esté en PersistibleModule
@@ -78,11 +80,15 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             @id = self.class.send :ORM_insert, self_hashed # se guarda el id ahora porque para las composiciones múltiples se necesita tenerlo
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
-                id_pair_hashed = {} # lo que se guardan son un par de ids que describen la relación de composición
-                id_pair_hashed[('id_' + self.class.name).to_sym] = @id
+                pair_hashed = {} # lo que se guardan son un par de ids que describen la relación de composición
+                pair_hashed[('id_' + self.class.name).to_sym] = @id
                 (send attr[:name]).each do |elem|
-                    id_pair_hashed[('id_' + attr[:name].to_s).to_sym] = elem.save!
-                    (self.class.send :ORM_attr_table, attr[:name]).insert id_pair_hashed
+                    if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
+                        pair_hashed[('id_' + attr[:name].to_s).to_sym] = elem.save!
+                    else
+                        pair_hashed[attr[:name]] = elem
+                    end
+                    (self.class.send :ORM_attr_table, attr[:name]).insert pair_hashed
                 end
             end
             return @id # es importante retornar el id para poder hacer save! con composición
@@ -105,7 +111,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             ((self.class.instance_variable_get :@persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
                 matching_entries = ((self.class.send :ORM_attr_table, attr[:name]).entries.select { |entry| entry[('id_' + self.class.name).to_sym] == @id })
                 elem_enum = matching_entries.map do |entry|
-                    (attr[:type].find_by_id entry[('id_' + attr[:name].to_s).to_sym])[0]
+                    if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
+                        (attr[:type].find_by_id entry[('id_' + attr[:name].to_s).to_sym])[0]
+                    else
+                        entry[attr[:name]]
+                    end
                 end
                 send (attr[:name].to_s + '=').to_sym, elem_enum.to_a
             end
@@ -169,6 +179,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
+        private
         def validate_blank(value)
             if value.nil? || value.empty? then raise 'The instance can not be nil nor empty'
             end
@@ -197,8 +208,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def exception_if_no_id
             if not @id then raise 'this instance is not persisted' end # TODO armar excepciones decentes
         end
-
-        private :exception_if_no_id
     end
 
 
@@ -254,9 +263,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 end
                 if self.singleton_class.ancestors.include? PersistibleClass
                     if query_attr[:multiple]
-                        ((ORM_attr_table query_attr[:name]).entries.select { |entry| entry[('id_' + name).to_sym] == id }).each do |entry|
-                            # TODO qué se compara? la lista entera? una selección de la lista? un sólo objeto de la lista? qué toma por parametro un find_by_<what> cuando se busca por un attr multiple?
-                        end
+                        # TODO excepcion (habría que chequearlo antes)
                     else # TODO esto es un asco de nesteo y hay que refactorizar
                         if args[0].class.ancestors.include? PersistibleObject
                             comparison_value = args[0].id
