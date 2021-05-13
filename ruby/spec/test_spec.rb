@@ -536,4 +536,30 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       expect(mora.id).not_to eq nil
     end
   end
+
+  describe 'Valores por defecto'  do
+    class Room
+      has_one String, named: :teacher, default: 'Lisa'
+    end
+
+    it 'Cuando inicializa la instancia le asigna el valor por defecto' do
+      room = Room.new
+      expect(room.teacher).to eq 'Lisa'
+    end
+
+    it 'si se le asigna un valor distinto al default debe respetarlo' do
+      room = Room.new
+      room.teacher = 'Bart'
+      expect(room.teacher).to eq 'Bart'
+    end
+
+    it 'Si se guarda nil y se resfreca debe setear el default' do
+      room = Room.new
+      room.teacher = nil
+      room.save!
+      room.refresh!
+      expect(room.teacher).to eq 'Lisa'
+    end
+
+  end
 end
