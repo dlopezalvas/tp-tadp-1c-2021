@@ -19,11 +19,11 @@ class Module
             end
             @descendants = []
             @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
-            @persistible_attrs = [{name: :id, type: String, multiple: false, blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]}] # la metadata de cada columna de la tabla
+            @persistible_attrs = [{name: :id, type: String, multiple: false, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]}] # la metadata de cada columna de la tabla
         end
         attr_name = description[:named]
         @persistible_attrs.delete_if { |attr| attr[:name] == attr_name }
-        @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple, blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
+        @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
         @descendants.each do |descendant|
             descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
         end
@@ -50,6 +50,12 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     send (attr[:name].to_s + '=').to_sym, [] # todo esto es sólo para inicializar las listas persistibles
                 end
             end
+            (self.class.instance_variable_get :@persistible_attrs).each do |attr|
+                if(attr[:name].to_s != 'id' and attr[:default])
+                    send (attr[:name].to_s + '=').to_sym, attr[:default]
+                end
+            end
+
             super *args
         end
 
@@ -90,6 +96,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     attr_final_value = (attr[:type].find_by_id entry[attr[:name]])[0]
                 else
                     attr_final_value = entry[attr[:name]]
+                end
+                if attr[:default] and attr_final_value == nil
+                    attr_final_value = attr[:default]
                 end
                 send (attr[:name].to_s + '=').to_sym, attr_final_value # seteo cada atributo con el valor dado por la entry de la tabla
             end
@@ -138,7 +147,24 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 attr_value = send attr[:name]
                 #TODO ver condiciones con has_many
                 attr_value.each do |elem|
-                    if elem.class.ancestors.include? PersistibleObject then elem.validate! end
+                    if attr[:validate] #TODO ver si deberia funciona con elementos no persistibles
+                        validate_block(elem, &attr[:validate])
+                    end
+                    if attr[:blank]
+                        validate_blank(elem)
+                    end
+
+                    if elem.is_a? Numeric
+                        if attr[:from]
+                            validate_from(attr[:from], elem)
+                        end
+                        if attr[:to]
+                            validate_to(attr[:to], elem)
+                        end
+                    end
+                    if elem.class.ancestors.include? PersistibleObject
+                        elem.validate!
+                    end
                 end
             end
         end
@@ -159,7 +185,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def validate_block(value, &block)
-            if not block.call(value) then raise 'The instance has invalid values'
+            if not value.instance_eval(&block) then raise 'The instance has invalid values'
             end
         end
 
