@@ -608,4 +608,50 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     end
 
   end
+
+  describe "Herencia" do
+
+    module Legajo
+      has_one Numeric, named: :legajo
+    end
+
+    module Address
+      has_one String, named: :street
+      has_one Numeric, named: :number
+    end
+
+    class Person
+      include Legajo
+    end
+
+    class Employe < Person
+      include Address
+      has_one String, named: :role
+      has_one Boolean, named: :has_childrend
+    end
+
+    it 'se deberia persistir la clase que incluye un module persistible' do
+      juan = Person.new
+      juan.first_name = "Juan"
+      juan.last_name = "Perez"
+      juan.legajo = 123456
+      juan.save!
+      expect(juan.id).not_to eq(nil)
+    end
+
+    it 'se deberia persistir una herencia' do
+      juan_boss = Employe.new
+
+      juan_boss.role = "Boss"
+      juan_boss.first_name = "Juan"
+      juan_boss.last_name = "Perez"
+      juan_boss.legajo = 123456
+      juan_boss.street = "Calle Falsa"
+      juan_boss.number = 123
+      juan_boss.has_childrend = false
+      juan_boss.save!
+
+      expect(Employe.all_instances).not_to eq([])
+    end
+  end
 end
