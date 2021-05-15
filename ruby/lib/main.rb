@@ -1,13 +1,10 @@
 require 'tadb'
 
-# TODO find_by_<what> para composición
 # TODO abstraer transformaciones de símbolos
 # TODO abstraer todo lo posible juas
-# TODO el save no updatea bien los has_many
-# TODO el forget no limpia las tablas de los has_many
 
 class Module
-    def ORM_add_persistible_attr type, description, is_multiple: # TODO está bien poner esto acá? quizás sea mejor que esté en PersistibleModule
+    def ORM_add_persistible_attr type, description, is_multiple:
         if type.ancestors.include? ORM::PersistibleObject # TODO y si ese type se hace persistible más adelante?
             type.send :ORM_add_deletion_observer, self
         end
@@ -57,17 +54,16 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     send (attr[:name].to_s + '=').to_sym, attr[:default]
                 end
             end
-
             super *args
         end
 
         def save!
             if @id
-                self.class.send :ORM_delete_entry, @id # TODO no estoy seguro de si esto es necesario
+               self.class.send :ORM_delete_entry, @id # TODO no estoy seguro de si esta línea es necesaria
+               self.class.send :ORM_delete_from_attr_tables, @id
             else
                 define_singleton_method(:id) { @id } # TODO el getter se lo damos en la singleton sólo a los que están persistidos; consultar si está bien
             end
-
             self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
             self.validate!
             ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] or ((send attr[:name]) == nil)}).each do |attr|
@@ -126,6 +122,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             exception_if_no_id
             self.class.send :ORM_notify_deletion, @id
             self.class.send :ORM_delete_entry, @id
+            self.class.send :ORM_delete_from_attr_tables, @id
             singleton_class.remove_method :id
             @id = nil # si no se hace esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! puede romper
         end
@@ -217,7 +214,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         # TODO armar un module a modo de namespace para los métodos ORM_*?
-        def ORM_add_descendant descendant # TODO private
+        def ORM_add_descendant descendant
             # return if (descendant.singleton_class.ancestors & [PersistibleModule, PersistibleClass]).empty?
             @descendants << descendant
             @persistible_attrs.each do |attr|
@@ -228,7 +225,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def ORM_get_description attr # TODO private
             description_hashed = {}
             description_hashed[:named] = attr[:name]
-            description_hashed
+            description_hashed # TODO todos los demás datos de la descripción
         end
 
         def ORM_get_all_deletion_observers
@@ -279,6 +276,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
+        # TODO mover esto a *Class
         def instantiate entries # dada una lista de entries, devuelve la lista de instancias correspondientes
             entries.map do |entry|
                 instance = new
@@ -316,7 +314,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def ORM_wipe_references_to type, id # acá se recibe todo id que haya sido borrado de la tabla de su clase, cuya clase forme parte de una composición con esta clase receptora
             (@persistible_attrs.select { |attr| attr[:type] == type }).each do |attr|
                 if attr[:multiple] # si es composición multiple se borran las entries correspondientes en la tabla de la relación entre las dos clases
-                    ((ORM_attr_table attr[:name]).entries.select { |entry| entry[('id_' + attr[:name].to_s).to_sym] == id }).each do |entry|
+                   ((ORM_attr_table attr[:name]).entries.select { |entry| entry[('id_' + attr[:name].to_s).to_sym] == id }).each do |entry|
                         (ORM_attr_table attr[:name]).delete entry[:id]
                     end
                 else # si es composición simple, se debe traer el objeto a memoria, setear el atributo en nil, y darle save! de nuevo
@@ -337,7 +335,15 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             super + (instantiate @table.entries)
         end
 
-        private :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table
+        def ORM_delete_from_attr_tables id
+           (@persistible_attrs.select { |attr| attr[:multiple] }).each do |attr|
+               ((ORM_attr_table attr[:name]).entries.select { |entry| entry[('id_' + name).to_sym] == id }).each do |entry|
+                    (ORM_attr_table attr[:name]).delete entry[:id]
+                end
+           end
+        end
+
+        private :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table, :ORM_delete_from_attr_tables
     end
 end
 
