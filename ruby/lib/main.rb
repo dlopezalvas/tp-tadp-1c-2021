@@ -130,23 +130,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def validate!
             ((self.class.instance_variable_get :@persistible_attrs).reject { |attr| attr[:multiple] or attr[:name] == :id}).each do |attr|
                 attr_value = send attr[:name]
-                if attr[:blank]
-                    validate_blank(attr_value)
-                end
-
-                if attr_value.is_a? Numeric
-                    if attr[:from]
-                      validate_from(attr[:from], attr_value)
-                    end
-                    if attr[:to]
-                        validate_to(attr[:to], attr_value)
-                    end
-                end
-
-                if attr[:validate]
-                    validate_block(attr_value, &attr[:validate])
-                end
-
+                other_validations(attr, attr_value)
                 exception_if_invalid_values(!(attr_value == nil or attr_value.is_a? attr[:type]))
             end
 
@@ -154,21 +138,8 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 attr_value = send attr[:name]
                 #TODO ver condiciones con has_many
                 attr_value.each do |elem|
-                    if attr[:validate] #TODO ver si deberia funciona con elementos no persistibles
-                        validate_block(elem, &attr[:validate])
-                    end
-                    if attr[:blank]
-                        validate_blank(elem)
-                    end
-
-                    if elem.is_a? Numeric
-                        if attr[:from]
-                            validate_from(attr[:from], elem)
-                        end
-                        if attr[:to]
-                            validate_to(attr[:to], elem)
-                        end
-                    end
+                    #TODO ver si deberia funciona con elementos no persistibles
+                    other_validations(attr, elem)
                     if elem.class.ancestors.include? PersistibleObject
                         elem.validate!
                     end
@@ -177,6 +148,23 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         private
+        def other_validations (attr, value)
+            if attr[:blank]
+                validate_blank(value)
+            end
+            if value.is_a? Numeric
+                if attr[:from]
+                    validate_from(attr[:from], value)
+                end
+                if attr[:to]
+                    validate_to(attr[:to], value)
+                end
+            end
+            if attr[:validate]
+                validate_block(value, &attr[:validate])
+            end
+        end
+
         def validate_blank(value)
             if value.nil? || value.empty? then raise 'The instance can not be nil nor empty'
             end
