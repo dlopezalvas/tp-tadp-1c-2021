@@ -630,18 +630,25 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       has_one Boolean, named: :has_childrend
     end
 
-    it 'se deberia persistir la clase que incluye un module persistible' do
-      juan = Person.new
-      juan.first_name = "Juan"
-      juan.last_name = "Perez"
-      juan.legajo = 123456
-      juan.save!
-      expect(juan.id).not_to eq(nil)
+    module Phone
+      has_one Numeric, named: :number
     end
 
-    it 'se deberia persistir una herencia' do
-      juan_boss = Employe.new
+    class Manager
+      include Phone
+      has_one String, named: :next_meeting
+    end
 
+    class Assistant
+      include Phone
+      has_one String, named: :name
+    end
+
+    let(:juan){Person.new}
+    let(:juan_boss){Employe.new}
+
+
+    it 'se deberia persistir la clase que incluye un module persistible' do
       juan_boss.role = "Boss"
       juan_boss.first_name = "Juan"
       juan_boss.last_name = "Perez"
@@ -651,7 +658,79 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       juan_boss.has_childrend = false
       juan_boss.save!
 
+      juan.first_name = "Juan"
+      juan.last_name = "Perez"
+      juan.legajo = 123456
+      juan.save!
+      expect(juan.id).not_to eq(nil)
+    end
+
+    it 'se deberia persistir una herencia' do
+      juan_boss.role = "Boss"
+      juan_boss.first_name = "Juan"
+      juan_boss.last_name = "Perez"
+      juan_boss.legajo = 123456
+      juan_boss.street = "Calle Falsa"
+      juan_boss.number = 123
+      juan_boss.has_childrend = false
+      juan_boss.save!
+
+      juan.first_name = "Juan"
+      juan.last_name = "Perez"
+      juan.legajo = 123456
+      juan.save!
       expect(Employe.all_instances).not_to eq([])
+    end
+
+    it 'all_instance de superclse debe traer todas las instacias de las subclases' do
+      juan_boss.role = "Boss"
+      juan_boss.first_name = "Juan"
+      juan_boss.last_name = "Perez"
+      juan_boss.legajo = 123456
+      juan_boss.street = "Calle Falsa"
+      juan_boss.number = 123
+      juan_boss.has_childrend = false
+      juan_boss.save!
+
+      juan.first_name = "Juan"
+      juan.last_name = "Perez"
+      juan.legajo = 123456
+      juan.save!
+      expect(Person.all_instances.size).to eq(2)
+    end
+
+    it 'find_by en superclase debe traer elementos de subclases' do
+      juan_boss.role = "Boss"
+      juan_boss.first_name = "Juan"
+      juan_boss.last_name = "Perez"
+      juan_boss.legajo = 123456
+      juan_boss.street = "Calle Falsa"
+      juan_boss.number = 123
+      juan_boss.has_childrend = false
+      juan_boss.save!
+
+      juan.first_name = "Juan"
+      juan.last_name = "Perez"
+      juan.legajo = 123456
+      juan.save!
+      expect(Person.all_instances.size).to eq(2)
+    end
+    #TODO agregar test por dos clases que incluyan un mismo modulo
+
+    it 'find_by en modulos incluidos en varias clases debe traer solo los elementos de la clase solicitada' do
+      m = Manager.new
+      m.number = 123
+      m.next_meeting = "Monday"
+      m.save!
+
+      a = Assistant.new
+      a.number = 211
+      a.name = "Juan"
+      a.save!
+
+      expect(Manager.all_instances.size).to eq(1)
+      expect(Assistant.all_instances.size).to eq(1)
+      expect(Phone.all_instances.size).to eq(2)
     end
   end
 end
