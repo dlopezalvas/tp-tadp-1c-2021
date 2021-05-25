@@ -5,7 +5,7 @@ require 'tadb'
 
 class Module
     def ORM_add_persistible_attr type, description, is_multiple:
-        if type.ancestors.include? ORM::PersistibleObject # TODO y si ese type se hace persistible más adelante?
+        if type.ancestors.include? ORM::PersistibleObject # TODO y si ese type se hace persistible más adelante?  ver por que rompe si uso .is_a?
             type.send :ORM_add_deletion_observer, self
         end
         if not @persistible_attrs
@@ -140,7 +140,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 attr_value.each do |elem|
                     #TODO ver si deberia funciona con elementos no persistibles
                     other_validations(attr, elem)
-                    if elem.class.ancestors.include? PersistibleObject
+                    if elem.is_a? PersistibleObject
                         elem.validate!
                     end
                 end
@@ -238,30 +238,12 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             instances
         end
 
-        def method_missing symbol, *args, &block # para tratar con el requerimiento de find_by_<what>
-            prefix = 'find_by_'
-            query_attr = @persistible_attrs.detect { |attr| attr[:name].to_s == symbol.to_s[(prefix.length)..-1] } # buscamos el campo según el cual se filtra en la query
-            if query_attr and symbol.to_s.start_with? prefix # si el campo existe y el prefijo es el correcto:
-                instances = []
-                @descendants.each do |descendant|
-                    instances += descendant.send symbol, *args, &block
-                end
-                if self.singleton_class.ancestors.include? PersistibleClass
-                    if query_attr[:multiple]
-                        # TODO excepcion (habría que chequearlo antes)
-                    else # TODO esto es un asco de nesteo y hay que refactorizar
-                        if args[0].class.ancestors.include? PersistibleObject
-                            comparison_value = args[0].id
-                        else
-                            comparison_value = args[0]
-                        end
-                        instances += instantiate @table.entries.select { |entry| entry[query_attr[:name]] == comparison_value }
-                    end
-                end
-                instances
-            else
-                super # si no matchea, continúa el method lookup
-            end
+        def create_method_find_by name
+            selector = ("find_by_#{name}" ).to_sym
+            puts self.to_s
+            puts selector
+
+            define_method  (selector) {|param| all_instaces.select{|elem| elem.(name.to_sym) == param } }
         end
 
         # TODO mover esto a *Class
