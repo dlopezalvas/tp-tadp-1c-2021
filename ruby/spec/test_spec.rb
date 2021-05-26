@@ -3,18 +3,22 @@ class Person
   has_one String, named: :last_name
 
   attr_accessor :some_other_non_persistible_attribute
-end
 
-class Empty
+  def initialize (first_name = nil, last_name = nil)
+    @first_name = first_name
+    @last_name = last_name
+  end
 end
 
 class Grade
-  has_one String, named: :value    # Hasta acÃ¡ :value es un String
-  has_one Numeric, named: :value   # Pero ahora es Numeric
+  has_one Numeric, named: :value
+  def initialize (value = nil)
+    @value = value
+  end
 end
 
 describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
-  let(:persona) { Person.new }
+
 
   after do
     TADB::DB.clear_all
@@ -22,12 +26,14 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
   describe 'has_one' do
     it 'un atributo de un objeto persistible puede cambiar el valor multiples veces' do
-      persona.first_name = "raul"
+      persona = Person.new("raul", "Gomes")
       persona.first_name = "jorge"
       expect(persona.first_name).to eq "jorge"
     end
 
-    it 'si defino dos atributos con el mismo nombre, el segundo pisa el primero' do
+    it 'La ultima definicion de un atributo pisa las anteriores' do
+      Empty = Class.new()
+
       Empty.has_one Boolean, named: :address
       Empty.has_one String, named: :address
 
@@ -44,27 +50,24 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
   describe 'save!' do
     it 'al guardar un objeto persistible adquiere un atributo persistible @id' do
-      persona.first_name = "raul"
-      persona.last_name = "porcheto"
+      persona = Person.new("raul", "porcheto")
       persona.save!
       expect(persona.id).not_to be nil
     end
 
     it 'un objeto persistible sin guardar no tiene un @id' do
-      persona.first_name = "raul"
-      persona.last_name = "porcheto"
+      persona = Person.new("raul", "porcheto")
       expect{persona.id}.to raise_error NoMethodError
     end
 
     it 'un objeto persistible sin datos puede ser guardado' do
-      carlos = Person.new
+      carlos = Person.new()
       carlos.save!
       expect(carlos.id).not_to eq nil
     end
 
-    it 'al guardar un objeto persistible que ya habia sido borrado adquiere un atributo persistible @id' do
-      persona.first_name = "raul"
-      persona.last_name = "porcheto"
+    it 'Un objeto persistible puede volver a guardarse despues de haber sido eliminado' do
+      persona = Person.new("raul", "porcheto")
       persona.save!
       persona.forget!
       persona.save!
@@ -73,41 +76,37 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
   end
 
   describe 'refresh!' do
-    it 'al refrescar un objeto al que se le cambio el valor del atributo, su valor vuelve al guardado' do #TODO ver nombre por otro mas lindo gg
-      persona.first_name = "jose"
-      persona.last_name = "Lopez"
+    it 'Al refrescar un objeto persistible sus atributos toman los valores guardados' do
+      persona = Person.new("raul", "porcheto")
       persona.save!
       persona.first_name = "pepe"
       persona.refresh!
-      expect(persona.first_name).to eq "jose"
+      expect(persona.first_name).to eq "raul"
     end
 
-    it 'no se puede refrescar un objeto sin id' do
-      objeto = Person.new
-      expect{objeto.refresh!}.to raise_error 'this instance is not persisted' #TODO ver de cambiar cuando se hagan excepciones decentes (?)
+    it 'No se puede refrescar un objeto que no fue guardado' do
+      persona = Person.new("raul", "porcheto")
+      expect{persona.refresh!}.to raise_error 'this instance is not persisted'
     end
   end
 
   describe 'forget!' do
-    it 'un objeto al que se le mando forget! deja de tener @id' do
-      persona.first_name = "arturo"
-      persona.last_name = "puig"
+    it 'Al eliminar un objeto persistible este deja de tener @id' do
+      persona = Person.new("raul", "porcheto")
       persona.save!
       persona.forget!
-      expect{persona.refresh!}.to raise_error 'this instance is not persisted' #TODO ver de cambiar cuando se hagan excepciones decentes (?)
+      expect{persona.refresh!}.to raise_error 'this instance is not persisted'
     end
   end
 
   describe 'all_instances' do
 
-    class Golondrina
-      has_one String, named: :nombre
-    end
+
     class Pajaro
       has_one String, named: :nombre
 
-      def initialize nombre2 = nil
-        nombre = nombre2
+      def initialize nombre = nil
+        @nombre = nombre
       end
     end
 
@@ -115,60 +114,43 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
     end
 
-    it 'devuelve las instancias de sus decencientes' do
+    it 'Si una clase recibe all intances devuelve tambien las instancias de sus decencientes' do
       pepito = Benteveo.new("pepito")
-=begin
-      pepito.nombre = "pepito"
-=end
       pepito2 = Pajaro.new("pepito2")
-      #pepito2.nombre = "pepito2"
       pepito.save!
       pepito2.save!
       expect(Pajaro.all_instances.map{|elem| elem.id}).to eq([pepito.id, pepito2.id])
     end
 
-    it 'una clase sin objetos pesistidos devuelve un array vacio' do
-      expect(Golondrina.all_instances).to eq []
+    it 'una clase sin objetos pesistidos no devuelve instancias' do
+      pepito = Pajaro.new("pepito")
+      expect(Pajaro.all_instances).to eq []
     end
 
-    it 'una clase con un objeto persistido y uno no persistido devuelve ese objeto' do
-      pepita = Golondrina.new()
-      pepita.nombre = "pepita"
+    it 'Los objetos persistidos borrados dejan de ser instacias persistidas' do
+      jorge = Pajaro.new("jorge")
+      jorge.save!
+      jorge.forget!
+      expect(Pajaro.all_instances).to eq []
+    end
+
+    it 'Los objetos persistidos borrados pueden volver a ser instacias persistidas' do
+      jorge = Pajaro.new("jorge")
+      jorge.save!
+      jorge.forget!
+      jorge.save!
+      expect(Pajaro.all_instances.first.id).to eq jorge.id
+    end
+
+    it 'Una clase solo devuelve sus instancias persistidas' do
+      jorge = Pajaro.new("jorge")
+      jorge.save!
+      jorge.forget!
+      pepita = Pajaro.new("pepita")
       pepita.save!
-      jorge = Golondrina.new
-      jorge.nombre = "jorge"
-      expect(Golondrina.all_instances.first.id).to eq pepita.id
-    end
-
-    it 'al borrar un objeto persistido, este deja de pertenecer a la lista de instacias persistidas' do
-      jorge = Golondrina.new
-      jorge.nombre = "jorge"
-      jorge.save!
-      jorge.forget!
-      expect(Golondrina.all_instances).to eq []
-    end
-
-    it 'un objeto persistidos que fue borrado y guardado de nuevo pertenece a la lista de instacias persistidas' do
-      jorge = Golondrina.new
-      jorge.nombre = "jorge"
-      jorge.save!
-      jorge.forget!
-      jorge.save!
-      expect(Golondrina.all_instances.first.id).to eq jorge.id
-    end
-
-    it 'una clase con 2 objetos persistidos y un objeto persistido borrado tiene dos instancias pesistidas' do
-      jorge = Golondrina.new
-      jorge.nombre = "jorge"
-      jorge.save!
-      jorge.forget!
-      pepita = Golondrina.new
-      pepita.nombre = "pepita"
-      pepita.save!
-      paulina = Golondrina.new
-      paulina.nombre = "paulina"
+      paulina = Pajaro.new("paulina")
       paulina.save!
-      expect(Golondrina.all_instances.size).to eq 2
+      expect(Pajaro.all_instances.size).to eq 2
     end
   end
 
@@ -177,6 +159,11 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       has_one String, named: :full_name
       has_one Numeric, named: :grade
 
+      def initialize (full_name = nil, grade = 0)
+        @full_name = full_name
+        @grade = grade
+      end
+
       def has_last_name(last_name)
         self.full_name.split(' ')[1] === last_name
       end
@@ -184,52 +171,40 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       def promoted
         self.grade > 8
       end
+
     end
 
+
     it 'No se puede buscar un objeto con un metodo especifico que recibe argumentos' do
-      nahuel = Student.new
-      nahuel.full_name = "Nahuel Rodriguez"
-      nahuel.grade = 5
+      nahuel = Student.new("Nahuel Rodriguez", 5)
       nahuel.save!
       expect{Student.find_by_has_last_name("Rodriguez")}.to raise_error NoMethodError
     end
 
     it 'No se puede buscar un objeto con un metodo setter' do
-      nahuel = Student.new
-      nahuel.full_name = "Nahuel Rodriguez"
-      nahuel.grade = 5
+      nahuel = Student.new("Nahuel Rodriguez", 5)
       nahuel.save!
       expect{Student.find_by_grade=(6)}.to raise_error NoMethodError
     end
 
     it 'Se puede buscar un objeto con un método que no sea un getter' do
-      nahuel = Student.new
-      nahuel.full_name = "Nahuel Rodriguez"
-      nahuel.grade = 9
+      nahuel = Student.new("Nahuel Rodriguez", 9)
       nahuel.save!
       expect((Student.find_by_promoted(true)).first.id).to eq (nahuel.id)
     end
 
     it 'Se puede buscar un objeto con un metodo especifico' do
-      nahuel = Student.new
-      nahuel.full_name = "Nahuel Rodriguez"
-      nahuel.grade = 5
+      nahuel = Student.new("Nahuel Rodriguez", 5)
       nahuel.save!
       expect((Student.find_by_full_name("Nahuel Rodriguez")).first.id).to eq (nahuel.id)
     end
 
     it 'Se puede buscar varios objetos con un metodo especifico' do
-      nahuel = Student.new
-      nahuel.full_name = "Nahuel Rodriguez"
-      nahuel.grade = 7
+      nahuel = Student.new("Nahuel Rodriguez", 7)
       nahuel.save!
-      dani = Student.new
-      dani.full_name = "Dani Perez"
-      dani.grade = 7
+      dani = Student.new("Dani Perez", 7)
       dani.save!
-      mica = Student.new
-      mica.full_name = "Mica Gonzales"
-      mica.grade = 8
+      mica = Student.new("Mica Gonzales", 8)
       mica.save!
       expect((Student.find_by_grade (7)).size).to eq 2
     end
@@ -244,59 +219,53 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
     class Nota
       has_one Numeric, named: :valor
+
+      def initialize (nota = nil)
+        @valor = nota
+      end
     end
 
     class Estudiante
       has_one String, named: :nombre
       has_one Nota, named: :nota
+      def initialize (nombre = nil, nota = nil)
+        @nombre = nombre
+        @nota = nota
+      end
     end
 
     it 'El atributo compuesto devuelve el objeto' do
-      leo = Estudiante.new
-      leo.nombre = "leo sbaraglia"
-      leo.nota = Nota.new
-      leo.nota.valor = 8
+      nota = Nota.new(8)
+      leo = Estudiante.new("leo sbaraglia", nota)
       leo.save!
       expect(leo.nota.valor).to eq 8
     end
 
     it 'El atributo compuesto refrescado tiene el valor guardado' do
-      juan = Estudiante.new
-      juan.nombre = "juan sbaraglia"
-      juan.nota = Nota.new
-      juan.nota.valor = 8
+      nota = Nota.new(8)
+      juan = Estudiante.new("juan sbaraglia", nota)
       juan.save!
-      juan.nota = Nota.new
-      juan.nota.valor = 9
+      juan.nota = Nota.new(9)
       juan.refresh!
       expect(juan.nota.valor).to eq 8
     end
 
     it 'El atributo compuesto se puede borrar y volver a guardar' do
-      juan = Estudiante.new
-      juan.nombre = "juan sbaraglia"
-      juan.nota = Nota.new
-      juan.nota.valor = 8
+      juan = Estudiante.new("juan sbaraglia", Nota.new(8))
       juan.save!
       juan.forget!
-      juan.nota = Nota.new
-      juan.nota.valor = 9
+      juan.nota = Nota.new(9)
       juan.save!
-      juan.nota = Nota.new
-      juan.nota.valor = 10
+      juan.nota = Nota.new(10)
       juan.refresh!
       expect(juan.nota.valor).to eq 9
     end
 
     it 'El atributo compuesto puede ser actualizado desde afuera del objeto' do
-      jose = Estudiante.new
-      jose.nombre = "jose sbaraglia"
-      nota = Nota.new
-      nota.valor = 8
-      jose.nota = nota
+      nota = Nota.new(8)
+      jose = Estudiante.new("jose sbaraglia", nota)
       jose.save!
-      jose.nota = Nota.new
-      jose.nota.valor = 9
+      jose.nota = Nota.new(9)
       nota.valor = 2
       nota.save!
       jose.refresh!
@@ -304,48 +273,34 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     end
 
     it 'El atributo compuesto puede ser actualizado desde otro objeto' do
-      pepito = Estudiante.new
-      juani = Estudiante.new
-      juani.nombre = "juani sbaraglia"
-      juani.nota = Nota.new
-      juani.nota.valor = 9
+      juani = Estudiante.new("juani sbaraglia", Nota.new(9))
       juani.save!
-      pepito.nombre = "Pepito Maldonado"
-      pepito.nota = juani.nota
+      pepito = Estudiante.new("Pepito Maldonado", juani.nota)
       pepito.nota.valor = 10
       pepito.save!
       juani.refresh!
       expect(juani.nota.valor).to eq 10
     end
 
-    it 'El atributo compuesto puede ser refrescado desde otro objeto' do
-      pepito = Estudiante.new
-      juani = Estudiante.new
-      juani.nombre = "juani sbaraglia"
-      juani.nota = Nota.new
-      juani.nota.valor = 5
+    it 'El atributo compuesto puede ser refrescado desde otro objeto' do #TODO corregir esto
+      nota = Nota.new(9)
+      juani = Estudiante.new("juani sbaraglia", nota)
       juani.save!
-      pepito.nombre = "Pepito Maldonado"
-      pepito.nota = juani.nota
-      pepito.nota.valor = 6
+      pepito = Estudiante.new("Pepito Maldonado", juani.nota)
       pepito.save!
-      juani.nota.valor = 4
-      juani.save!
+      juani.nota.valor = 10
       pepito.refresh!
-      expect(pepito.nota.valor).to eq 4
+      puts nota.valor
+      puts pepito.nota.valor
+      expect(juani.nota.valor).to eq 9
     end
 
 
     it 'El atributo compuesto tiene la misma referencia que otro atributo compuesto con el mismo objeto' do
-      jose = Estudiante.new
-      jose.nombre = "jose sbaraglia"
-      nota = Nota.new
-      nota.valor = 8
-      jose.nota = nota
+      nota = Nota.new(8)
+      jose = Estudiante.new("jose sbaraglia", nota)
       jose.save!
-      paula = Estudiante.new
-      paula.nombre = "Paula Sbaraglia"
-      paula.nota = nota
+      paula = Estudiante.new("Paula Sbaraglia", nota)
       paula.nota.valor = 4
       paula.save!
       jose.refresh!
@@ -353,12 +308,10 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     end
 
     it 'Un objeto compuesto con un objeto no tiene la referencia a este cuando se borra' do
-      leo = Estudiante.new
-      leo.nombre = "leo sbaraglia"
-      leo.nota = Nota.new
-      leo.nota.valor = 8
+      nota = Nota.new(8)
+      leo = Estudiante.new("leo sbaraglia", nota)
       leo.save!
-      leo.nota.forget!
+      nota.forget!
       leo.refresh!
       expect(leo.nota).to eq nil
     end
@@ -367,57 +320,49 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
   describe 'Composicion con multiples objetos' do
     class Alumno
       has_one String, named: :nombre
-      has_many Nota, named: :notas
+      has_many Nota, named: :nota
+
+      def initialize (nombre = nil, notas = [])
+        @nombre = nombre
+        @nota = notas
+      end
+
     end
 
-    it 'un objeto con un atributo compuestos con multiples objetos sin asignar devuelve una lista vacia' do
-      tomas = Alumno.new
-      tomas.nombre = "tomas sbaraglia"
-      expect(tomas.notas).to eq []
+    it 'En objeto compuesto la lista de un has_many se inicializa vacia' do
+      clase = Class.new()
+      clase.has_many Nota, named: :notas
+      tomas = clase.new()
+      expect(tomas.nota).to eq []
     end
 
-    it 'Un objeto con atributo compuestos con multiples objetos devuelve la lista de objetos' do
-      guido = Alumno.new
-      guido.nombre = "Guido Bevilacqua"
-      unaNota = Nota.new
-      otraNota = Nota.new
-      guido.notas.push(unaNota)
-      guido.notas.last.valor = 8
-      guido.notas.push(otraNota)
-      guido.notas.last.valor = 5
+    it 'Composicion con has_many' do
+      unaNota = Nota.new(8)
+      otraNota = Nota.new(5)
+      guido = Alumno.new("Guido Bevilacqua", [unaNota, otraNota])
       guido.save!
-      expect(guido.notas).to eq [unaNota, otraNota]
+      expect(guido.nota).to eq [unaNota, otraNota]
     end
 
-    it 'Un objeto con atributo compuestos con multiples objetos refrescados devuelve la lista de objetos guardada' do
-      guido = Alumno.new
-      guido.nombre = "Guido Bevilaqua"
-      unaNota = Nota.new
-      otraNota = Nota.new
-      guido.notas.push(unaNota)
-      guido.notas.last.valor = 8
-      guido.notas.push(otraNota)
-      guido.notas.last.valor = 5
+    it 'Un objeto compuesto con has_many se puede refrescar' do
+      unaNota = Nota.new(8)
+      otraNota = Nota.new(5)
+      guido = Alumno.new("Guido Bevilacqua", [unaNota, otraNota])
       guido.save!
-      guido.notas.push(Nota.new)
+      guido.notas.push(Nota.new(9))
       guido.refresh!
-      expect(guido.notas.map{|x| x.id}).to eq [unaNota.id, otraNota.id]
+      expect(guido.nota.map{|x| x.id}).to eq [unaNota.id, otraNota.id]
     end
 
-    it 'Un objeto compuesto con otros objetos no tiene la referencia a esos objetos cuando se borran' do
-      guido = Alumno.new
-      guido.nombre = "Guido Bevilaqua"
-      unaNota = Nota.new
-      otraNota = Nota.new
-      guido.notas.push(unaNota)
-      guido.notas.last.valor = 8
-      guido.notas.push(otraNota)
-      guido.notas.last.valor = 5
+    it 'Un objeto compuesto con has_many borra las referencias a los objetos borrados' do
+      unaNota = Nota.new(8)
+      otraNota = Nota.new(5)
+      guido = Alumno.new("Guido Bevilacqua", [unaNota, otraNota])
       guido.save!
       unaNota.forget!
       otraNota.forget!
       guido.refresh!
-      expect(guido.notas.empty?).to eq true
+      expect(guido.nota.empty?).to eq true
     end
 
   end
@@ -425,37 +370,23 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
   describe 'validate!' do
 
     it 'No se puede guardar un objeto persistente con un valor de tipo diferente al declarado para un objeto con atributos simples' do
-      juan = Student.new
-      juan.full_name = 5
+      juan = Student.new(5)
       expect{juan.save!}.to raise_error 'The instance has invalid values'
     end
 
     it 'Se puede guardar un objeto persistente si los tipos coinciden' do
-      cande = Estudiante.new
-      cande.nombre = "Cande Sierra"
-      cande.nota = Nota.new
-      cande.nota.valor = 10
+      cande = Estudiante.new("Cande Sierra",  Nota.new(10))
       cande.save!
       expect(cande.id).not_to eq nil
     end
 
     it 'No se puede guardar un objeto persistente con composición si los tipos no coinciden' do
-      tom = Estudiante.new
-      tom.nombre = "Thomas Marlow"
-      tom.nota = Nota.new
-      tom.nota.valor = "Diez"
+      tom = Estudiante.new("Thomas Marlow", Nota.new("Diez"))
       expect{tom.save!}.to raise_error 'The instance has invalid values'
     end
 
     it 'Se puede guardar un objeto persistente con atributos complejos si los tipos coinciden' do
-      ara = Alumno.new
-      ara.nombre = "Ara"
-      unaNota = Nota.new
-      otraNota = Nota.new
-      ara.notas.push(unaNota)
-      ara.notas.last.valor = 8
-      ara.notas.push(otraNota)
-      ara.notas.last.valor = 5
+      ara = Alumno.new("Ara", [Nota.new(8), Nota.new(5)])
       ara.save!
       expect(ara.id).not_to eq nil
     end
@@ -649,6 +580,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
   end
 
 
+
   describe "Herencia" do
 
     module Legajo
@@ -660,19 +592,29 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       has_one Numeric, named: :number
     end
 
-    class Person
+
+    class Persons
       include Legajo
+      has_one String, named: :first_name
+      has_one String, named: :last_name
+
+      attr_accessor :some_other_non_persistible_attribute
     end
 
-    class Employe < Person
+
+
+    class Employe < Persons
       include Address
       has_one String, named: :role
       has_one Boolean, named: :has_childrend
+
     end
+
 
     module Phone
       has_one Numeric, named: :number
     end
+
 
     class Manager
       include Phone
@@ -684,7 +626,8 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       has_one String, named: :name
     end
 
-    let(:juan){Person.new}
+
+    let(:juan){Persons.new}
     let(:juan_boss){Employe.new}
 
     it 'se deberia persistir la clase que incluye un module persistible' do
@@ -735,7 +678,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       juan.last_name = "Perez"
       juan.legajo = 123456
       juan.save!
-      expect(Person.all_instances.size).to eq(2)
+      expect(Persons.all_instances.size).to eq(2)
     end
 
     it 'find_by en superclase debe traer elementos de subclases' do
@@ -752,7 +695,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       juan.last_name = "Perez"
       juan.legajo = 123456
       juan.save!
-      expect(Person.all_instances.size).to eq(2)
+      expect(Persons.all_instances.size).to eq(2)
     end
     #TODO agregar test por dos clases que incluyan un mismo modulo
 
@@ -772,5 +715,6 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       expect(Phone.all_instances.size).to eq(2)
     end
   end
+
 end
 
