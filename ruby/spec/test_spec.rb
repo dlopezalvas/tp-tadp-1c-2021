@@ -105,6 +105,26 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     end
     class Pajaro
       has_one String, named: :nombre
+
+      def initialize nombre2 = nil
+        nombre = nombre2
+      end
+    end
+
+    class Benteveo < Pajaro
+
+    end
+
+    it 'devuelve las instancias de sus decencientes' do
+      pepito = Benteveo.new("pepito")
+=begin
+      pepito.nombre = "pepito"
+=end
+      pepito2 = Pajaro.new("pepito2")
+      #pepito2.nombre = "pepito2"
+      pepito.save!
+      pepito2.save!
+      expect(Pajaro.all_instances.map{|elem| elem.id}).to eq([pepito.id, pepito2.id])
     end
 
     it 'una clase sin objetos pesistidos devuelve un array vacio' do
@@ -112,7 +132,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     end
 
     it 'una clase con un objeto persistido y uno no persistido devuelve ese objeto' do
-      pepita = Golondrina.new
+      pepita = Golondrina.new()
       pepita.nombre = "pepita"
       pepita.save!
       jorge = Golondrina.new
@@ -628,3 +648,4 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
   end
 end
+

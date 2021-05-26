@@ -4,49 +4,29 @@ require 'tadb'
 # TODO abstraer todo lo posible juas
 
 class Module
-    def ORM_add_persistible_attr type, description, is_multiple:
-        if type.ancestors.include? ORM::PersistibleObject # TODO y si ese type se hace persistible más adelante?  ver por que rompe si uso .is_a?
-            type.send :ORM_add_deletion_observer, self
-        end
-        if not @persistible_attrs
-            if self.class == Class
-                extend ORM::PersistibleClass
-                prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
-                @table = TADB::DB.table(name)
-            else
-                extend ORM::PersistibleModule
-            end
-            @descendants = []
-            @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
-            @persistible_attrs = [{name: :id, type: String, multiple: false, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]}] # la metadata de cada columna de la tabla
-        end
-        attr_name = description[:named]
-        @persistible_attrs.delete_if { |attr| attr[:name] == attr_name }
-        @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
-        @descendants.each do |descendant|
-            descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
-        end
-        attr_accessor attr_name # define getters+setters para los objetos
-    end
+
 
     def has_one type, description
+        extend ORM::PersistibleModule
         ORM_add_persistible_attr type, description, is_multiple: false
     end
 
     def has_many type, description
+        extend ORM::PersistibleModule
         ORM_add_persistible_attr type, description, is_multiple: true
     end
 
-    private :ORM_add_persistible_attr
 end
 
 
 module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la idea es no contaminar el namespace
-    module PersistibleObject # esto es sólo para objetos; todo lo estático está en PersistibleModule
-        def initialize *args
+
+    module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
+        def initialize (*args)
+            puts args
             ((self.class.ORM_get_persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
                 if (send attr[:name]) == nil
-                    send (attr[:name].to_s + '=').to_sym, [] # todo esto es sólo para inicializar las listas persistibles
+                    send (attr[:name].to_s + '=').to_sym, [] # esto es sólo para inicializar las listas persistibles
                 end
             end
             (self.class.ORM_get_persistible_attrs).each do |attr|
@@ -54,7 +34,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     send (attr[:name].to_s + '=').to_sym, attr[:default]
                 end
             end
-            super *args
+            super
         end
 
         def save!
@@ -69,7 +49,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.validate!
             ((self.class.ORM_get_persistible_attrs).reject { |attr| attr[:multiple] or ((send attr[:name]) == nil)}).each do |attr|
                 attr_value = send attr[:name]
-                if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
+                if attr[:type].is_a? PersistibleModule # TODO abstraer?
                     self_hashed[attr[:name]] = attr_value.save! # se necesita salvar las composiciones simples primero para obtener el id que se guarda acá
                 else
                     self_hashed[attr[:name]] = attr_value
@@ -80,7 +60,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 pair_hashed = {} # lo que se guardan son un par de ids que describen la relación de composición
                 pair_hashed[('id_' + self.class.name).to_sym] = @id
                 (send attr[:name]).each do |elem|
-                    if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
+                    if attr[:type].is_a? PersistibleModule # TODO abstraer?
                         pair_hashed[('id_' + attr[:name].to_s).to_sym] = elem.save!
                     else
                         pair_hashed[attr[:name]] = elem
@@ -103,7 +83,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             exception_if_no_id
             entry = self.class.send :ORM_get_entry, @id
             ((self.class.ORM_get_persistible_attrs).reject { |attr| attr[:multiple] or attr[:name] == :id}).each do |attr| # TODO abstraer
-                if attr[:type].ancestors.include? PersistibleObject
+                if attr[:type].is_a? PersistibleModule
                     attr_final_value = (attr[:type].find_by_id entry[attr[:name]])[0]
                 else
                     attr_final_value = entry[attr[:name]]
@@ -116,7 +96,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             ((self.class.ORM_get_persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
                 matching_entries = ((self.class.send :ORM_attr_table, attr[:name]).entries.select { |entry| entry[('id_' + self.class.name).to_sym] == @id })
                 elem_enum = matching_entries.map do |entry|
-                    if attr[:type].ancestors.include? PersistibleObject # TODO abstraer?
+                    if attr[:type].is_a? PersistibleModule # TODO abstraer?
                         (attr[:type].find_by_id entry[('id_' + attr[:name].to_s).to_sym])[0]
                     else
                         entry[attr[:name]]
@@ -157,6 +137,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         private
+
         def other_validations (attr, value)
             if attr[:blank]
                 validate_blank(value)
@@ -206,6 +187,34 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
+
+        def ORM_add_persistible_attr type, description, is_multiple:
+            if type.is_a? ORM::PersistibleModule # TODO y si ese type se hace persistible más adelante?
+                type.send :ORM_add_deletion_observer, self
+            end
+            if not @persistible_attrs
+                if self.class == Class
+                    extend ORM::PersistibleClass
+                    prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
+                    @table = TADB::DB.table(name)
+                else
+                    extend ORM::PersistibleModule
+                end
+                @descendants = []
+                @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
+                @persistible_attrs = [{name: :id, type: String, multiple: false, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]}] # la metadata de cada columna de la tabla
+            end
+            attr_name = description[:named]
+            @persistible_attrs.delete_if { |attr| attr[:name] == attr_name }
+            @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
+            @descendants.each do |descendant|
+                if(!descendant.instance_methods(false).include? attr_name)
+                    descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
+                end
+            end
+            attr_accessor attr_name # define getters+setters para los objetos
+        end
+
         def included includer_module
             ORM_add_descendant includer_module
         end
@@ -244,11 +253,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def all_instances
-            instances = []
-            @descendants.each do |descendant|
-                instances += descendant.all_instances
-            end
-            instances
+            @descendants.flat_map(&:all_instances)
         end
 
         def create_method_find_by name
@@ -312,7 +317,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def all_instances
-            instantiate @table.entries
+            super + (instantiate @table.entries)
         end
 
         def ORM_delete_from_attr_tables id
@@ -360,3 +365,39 @@ class TrueClass
         other == Boolean || super
     end
 end
+
+# para testear a manopla
+=begin
+module CosasTesting
+    class DNI
+        has_one Numeric, named: :number
+    end
+
+    class Grade
+        has_one Numeric, named: :value
+    end
+
+    module Person
+        has_one String, named: :full_name
+    end
+
+    class Student
+        include Person
+        has_many Grade, named: :grades
+        has_one DNI, named: :dni
+    end
+
+    class Ayu < Student
+        def initialize
+            g = Grade.new
+            g.value = 5
+            @grades=[g]
+            super
+        end
+    end
+
+    module Person
+        has_one Numeric, named: :dni
+    end
+end
+=end
