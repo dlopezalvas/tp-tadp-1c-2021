@@ -64,6 +64,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                self.class.send :ORM_delete_from_attr_tables, @id
             else
                 define_singleton_method(:id) { @id } # TODO el getter se lo damos en la singleton sólo a los que están persistidos; consultar si está bien
+                #TODO aca habria que poner otro create_find_by?
             end
             self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
             self.validate!
@@ -241,10 +242,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def create_method_find_by name
             selector = ("find_by_#{name}" ).to_sym
+            puts name
 
-            self.define_singleton_method (selector) do |param|
-                all_instances.select{|elem| elem.(name.to_sym) == param }
-            end
+            self.define_singleton_method (selector) { |param| all_instances.select { |elem| (elem.send (name.to_sym)) == param } }
         end
 
         # TODO mover esto a *Class
@@ -303,7 +303,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def all_instances
-            super + (instantiate @table.entries)
+            instantiate @table.entries
         end
 
         def ORM_delete_from_attr_tables id
