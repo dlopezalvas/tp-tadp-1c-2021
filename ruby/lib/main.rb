@@ -27,7 +27,6 @@ class Module
             descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
         end
         attr_accessor attr_name # define getters+setters para los objetos
-        create_method_find_by attr_name
     end
 
     def has_one type, description
@@ -89,7 +88,15 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     (self.class.send :ORM_attr_table, attr[:name]).insert pair_hashed
                 end
             end
+
+            create_find_by
             return @id # es importante retornar el id para poder hacer save! con composición
+        end
+
+        def create_find_by
+            self.class.instance_methods(false).reject{|method| method.to_s.end_with?("=") || method((method.to_sym)).arity > 0}.each do |method|
+                self.class.send :create_method_find_by, method.to_s
+            end
         end
 
         def refresh!

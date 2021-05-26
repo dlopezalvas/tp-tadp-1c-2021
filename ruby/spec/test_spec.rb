@@ -161,6 +161,9 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
         self.full_name.split(' ')[1] === last_name
       end
 
+      def promoted
+        self.grade > 8
+      end
     end
 
     it 'No se puede buscar un objeto con un metodo especifico que recibe argumentos' do
@@ -168,7 +171,23 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       nahuel.full_name = "Nahuel Rodriguez"
       nahuel.grade = 5
       nahuel.save!
-      expect{Student.find_by_has_last_name ("Rodriguez")}.to raise_error NoMethodError
+      expect{Student.find_by_has_last_name("Rodriguez")}.to raise_error NoMethodError
+    end
+
+    it 'No se puede buscar un objeto con un metodo setter' do
+      nahuel = Student.new
+      nahuel.full_name = "Nahuel Rodriguez"
+      nahuel.grade = 5
+      nahuel.save!
+      expect{Student.find_by_grade=(6)}.to raise_error NoMethodError
+    end
+
+    it 'Se puede buscar un objeto con un método que no sea un getter' do
+      nahuel = Student.new
+      nahuel.full_name = "Nahuel Rodriguez"
+      nahuel.grade = 9
+      nahuel.save!
+      expect((Student.find_by_promoted(true)).first.id).to eq (nahuel.id)
     end
 
     it 'Se puede buscar un objeto con un metodo especifico' do
