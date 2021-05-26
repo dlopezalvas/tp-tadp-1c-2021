@@ -27,6 +27,7 @@ class Module
             descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
         end
         attr_accessor attr_name # define getters+setters para los objetos
+        create_method_find_by attr_name
     end
 
     def has_one type, description
@@ -240,10 +241,10 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def create_method_find_by name
             selector = ("find_by_#{name}" ).to_sym
-            puts self.to_s
-            puts selector
 
-            define_method  (selector) {|param| all_instaces.select{|elem| elem.(name.to_sym) == param } }
+            self.define_singleton_method (selector) do |param|
+                all_instances.select{|elem| elem.(name.to_sym) == param }
+            end
         end
 
         # TODO mover esto a *Class
@@ -314,40 +315,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         private :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table, :ORM_delete_from_attr_tables
-    end
-end
-
-
-# para testear a manopla
-module CosasTesting
-    class DNI
-        has_one Numeric, named: :number
-    end
-
-    class Grade
-        has_one Numeric, named: :value
-    end
-
-    module Person
-        has_one String, named: :full_name
-    end
-
-    class Student
-        include Person
-        has_many Grade, named: :grades
-    end
-
-    class Ayu < Student
-        def initialize
-            g = Grade.new
-            g.value = 5
-            @grades=[g]
-            super
-        end
-    end
-
-    module Person
-        has_one DNI, named: :dni
     end
 end
 
