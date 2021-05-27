@@ -281,19 +281,6 @@ describe "Persistencia de objetos" do
       expect(juani.nota.valor).to eq 10
     end
 
-    it 'El atributo compuesto puede ser refrescado desde otro objeto' do #TODO corregir esto
-      nota = Nota.new(9)
-      juani = Estudiante.new("juani sbaraglia", nota)
-      juani.save!
-      pepito = Estudiante.new("Pepito Maldonado", juani.nota)
-      pepito.save!
-      juani.nota.valor = 10
-      pepito.refresh!
-      puts nota.valor
-      puts pepito.nota.valor
-      expect(juani.nota.valor).to eq 9
-    end
-
 
     it 'El atributo compuesto tiene la misma referencia que otro atributo compuesto con el mismo objeto' do
       nota = Nota.new(8)
@@ -352,6 +339,7 @@ describe "Persistencia de objetos" do
       guido.refresh!
       expect(guido.notas.map{|x| x.id}).to eq [unaNota.id, otraNota.id]
     end
+
 
     it 'Un objeto compuesto con has_many borra las referencias a los objetos borrados' do #TODO ver que rompe esto
       unaNota = Nota.new(8)
@@ -671,3 +659,12 @@ describe "Persistencia de objetos" do
 
 end
 
+class A
+  has_one String, named: :pepito
+end
+
+class A
+  def hola()
+    pepito == "hola"
+  end
+end

@@ -299,8 +299,10 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def ORM_wipe_references_to type, id # acá se recibe todo id que haya sido borrado de la tabla de su clase, cuya clase forme parte de una composición con esta clase receptora
-            (@persistible_attrs.select { |attr| attr[:type] == type }).each do |attr|
-                puts attr[:name].to_s
+            (@persistible_attrs.select { |attr| attr[:type] == type }).each do |attr| #TODO borra todo lo del mismo tipo
+                if (all_instances.empty?)
+                    return
+                end
                 if attr[:multiple] # si es composición multiple se borran las entries correspondientes en la tabla de la relación entre las dos clases
                    ((ORM_attr_table attr[:name]).entries.select { |entry| entry[('id_' + attr[:name].to_s).to_sym] == id }).each do |entry|
                         (ORM_attr_table attr[:name]).delete entry[:id]
