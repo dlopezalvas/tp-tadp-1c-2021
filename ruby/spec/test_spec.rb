@@ -316,11 +316,13 @@ describe "Persistencia de objetos" do
     end
 
     it 'En objeto compuesto la lista de un has_many se inicializa vacia' do
-      clase = Class.new()
-      clase.has_many Nota, named: :notas
-      tomas = clase.new()
+      class EstudianteEspecial
+        has_many Nota, named: :notas
+      end
+      tomas = EstudianteEspecial.new()
       expect(tomas.notas).to eq []
     end
+
 
     it 'Composicion con has_many' do
       unaNota = Nota.new(8)

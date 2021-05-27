@@ -25,7 +25,7 @@ class Module
         @persistible_attrs.delete_if { |attr| attr[:name] == attr_name }
         @persistible_attrs << {name: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
         @descendants.each do |descendant|
-            if(!descendant.instance_methods(false).include? attr_name)
+            if not descendant.instance_methods(false).include? attr_name
                 descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
             end
         end
@@ -50,7 +50,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
     module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
         def initialize (*args)
-            #puts args
             ((self.class.ORM_get_persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
                 if (send attr[:name]) == nil
                     send (attr[:name].to_s + '=').to_sym, [] # esto es sólo para inicializar las listas persistibles
@@ -308,7 +307,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                         (ORM_attr_table attr[:name]).delete entry[:id]
                     end
                 else # si es composición simple, se debe traer el objeto a memoria, setear el atributo en nil, y darle save! de nuevo
-                    puts "else"
                     intances_to_update = send ('find_by_' + attr[:name].to_s).to_sym, id
                     intances_to_update.each do |instance|
                         instance.send (attr[:name].to_s + '=').to_sym, nil
@@ -369,6 +367,26 @@ class TrueClass
 
     def self.===(other)
         other == Boolean || super
+    end
+end
+
+module CosasTestingReloaded
+    class Nota
+        has_one Numeric, named: :valor
+
+        def initialize (valor = nil)
+          @valor = valor
+        end
+    end
+
+    class Alumno
+        has_one String, named: :nombre
+        has_many Nota, named: :notas
+
+        def initialize (nombre = nil, notas = [])
+          @nombre = nombre
+          @notas = notas
+        end
     end
 end
 
