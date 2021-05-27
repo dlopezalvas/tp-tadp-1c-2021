@@ -367,6 +367,115 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
   end
 
+  describe "Herencia" do
+
+    module Legajo
+      has_one Numeric, named: :legajo
+    end
+
+    module Address
+      has_one String, named: :street
+      has_one Numeric, named: :number
+    end
+
+    class Human
+      include Legajo
+      has_one String, named: :first_name
+      has_one String, named: :last_name
+
+      attr_accessor :some_other_non_persistible_attribute
+    end
+
+    class Employee < Human
+      include Address
+      has_one String, named: :role
+      has_one Boolean, named: :has_children
+
+    end
+
+    module Phone
+      has_one Numeric, named: :number
+
+    end
+
+    class Manager
+      include Phone
+      has_one String, named: :next_meeting
+
+    end
+
+    class Assistant
+      include Phone
+      has_one String, named: :name
+
+    end
+
+
+    let(:juan){Human.new}
+    let(:juan_boss){Employee.new}
+
+    it 'se deberia persistir la clase que incluye un module persistible' do
+      juan_boss.role = "Boss"
+      juan_boss.first_name = "Juan"
+      juan_boss.last_name = "Perez"
+      juan_boss.legajo = 123456
+      juan_boss.street = "Calle Falsa"
+      juan_boss.number = 123
+      juan_boss.has_children = false
+      juan_boss.save!
+
+      juan.first_name = "Juan"
+      juan.last_name = "Perez"
+      juan.legajo = 123456
+      juan.save!
+      expect(juan.id).not_to eq(nil)
+    end
+
+    it 'se deberia persistir una herencia' do
+      juan_boss.role = "Boss"
+      juan_boss.first_name = "Juan"
+      juan_boss.last_name = "Perez"
+      juan_boss.legajo = 123456
+      juan_boss.street = "Calle Falsa"
+      juan_boss.number = 123
+      juan_boss.has_children = false
+      juan_boss.save!
+
+      juan.first_name = "Juan"
+      juan.last_name = "Perez"
+      juan.legajo = 123456
+      juan.save!
+      expect(Employee.all_instances).not_to eq([])
+    end
+
+    it 'find_by en superclase debe traer elementos de subclases' do
+      juan_boss.role = "Boss"
+      juan_boss.first_name = "Juan"
+      juan_boss.last_name = "Perez"
+      juan_boss.legajo = 123456
+      juan_boss.street = "Calle Falsa"
+      juan_boss.number = 123
+      juan_boss.has_children = false
+      juan_boss.save!
+
+      juan.first_name = "Juan"
+      juan.last_name = "Perez"
+      juan.legajo = 123456
+      juan.save!
+      expect(Human.all_instances.size).to eq(2)
+    end
+    #TODO agregar test por dos clases que incluyan un mismo modulo
+
+    it 'find_by en modulos incluidos en varias clases debe traer solo los elementos de la clase solicitada' do
+      m = Manager.new
+      m.number = 123
+      m.next_meeting = "Monday"
+      m.save!
+
+      expect(Manager.all_instances.size).to eq(1)
+    end
+  end
+
   describe 'validate!' do
 
     it 'No se puede guardar un objeto persistente con un valor de tipo diferente al declarado para un objeto con atributos simples' do
@@ -397,17 +506,21 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     class Bird
       has_one String, named: :name, no_blank: true
 
+      def initialize (name = nil)
+        @name = name
+      end
     end
 
     class Birds
       has_many String, named: :names, no_blank: true
+
+      def initialize (names = [])
+        @names = names
+      end
     end
 
-
-
     it 'No se puede guardar un objeto si tiene un atirbuto vacío' do
-      juancito = Bird.new
-      juancito.name = ""
+      juancito = Bird.new("")
       expect{juancito.save!}.to raise_error 'The instance can not be nil nor empty'
     end
 
@@ -417,87 +530,74 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     end
 
     it 'Se puede guardar un objeto si no tiene un atirbuto nulo' do
-      juancito = Bird.new
-      juancito.name = "Juancito De Las Nieves"
+      juancito = Bird.new("Juancito De Las Nieves")
       juancito.save!
       expect(juancito.id).not_to eq nil
     end
 
-    it 'No se puede guardar una coleccion que tiene objetos vacíos o nil' do
-      juancito = Birds.new
-      juancito.names.push("Juan")
-      juancito.names.push("")
+    it 'No se puede guardar una coleccion que tiene objetos vacíos' do
+      juancito = Birds.new(["Juan", ""])
       expect{juancito.save!}.to raise_error 'The instance can not be nil nor empty'
     end
 
-    it 'No se puede guardar una coleccion que tiene objetos vacíos o nil' do
-      juancito = Birds.new
-      juancito.names.push("Juan")
-      juancito.names.push(nil)
+    it 'No se puede guardar una coleccion que tiene nil' do
+      juancito = Birds.new(["Juan", nil])
       expect{juancito.save!}.to raise_error 'The instance can not be nil nor empty'
     end
 
-    it 'Se puede guardar una coleccion tiene que objetos vacíos o nil' do #TODO no pasa porque el save! no guarda objetos no persistibles
-      juancito = Birds.new
-      juancito.names.push("Juan")
-      juancito.names.push("Jorge")
+    it 'Se puede guardar una coleccion sin objetos vacios o nil' do
+      juancito = Birds.new(["Juan", "Jorge"])
       juancito.save!
       expect(juancito.id).not_to eq nil
     end
-
-
   end
 
   describe 'Validacion from' do
-    class Bird
+    class Cat
       has_one Numeric, named: :age, from: 5, to: 20
+
+      def initialize (age)
+        @age = age
+      end
     end
 
     class Dog
       has_many Numeric, named: :numerosFavoritos, from:0, to:100
+
+      def initialize (numerosFavoritos = [])
+        @numerosFavoritos = numerosFavoritos
+      end
     end
 
-    it 'No se puede guardar un obejeto si tiene una colecciones de objetos con valor menor al minimo requerido' do
-      tiff = Dog.new
-      tiff.numerosFavoritos.push(5)
-      tiff.numerosFavoritos.push(-2)
+    it 'Has many - No se puede guardar un obejeto si tiene algun valor menor al minimo requerido' do
+      tiff = Dog.new([5, -2])
       expect{tiff.save!}.to raise_error 'The instance can not be smaller than the minimum required'
     end
 
-    it 'No se puede guardar un obejeto si tiene una colecciones de objetos con valor mayor al maximo requerido' do
-      tiff = Dog.new
-      tiff.numerosFavoritos.push(5)
-      tiff.numerosFavoritos.push(200)
+    it 'Has many - No se puede guardar un obejeto si tiene algun valor mayor al maximo requerido' do
+      tiff = Dog.new([5, 200])
       expect{tiff.save!}.to raise_error 'The instance can not be bigger than the maximum required'
     end
 
-    it 'Se puede guardar un objeto si una coleccion de objetos con valor mayor al minimo requerido' do #TODO no pasa porque no anda el save
-      tiff = Dog.new
-      tiff.numerosFavoritos.push(5)
-      tiff.numerosFavoritos.push(99)
+    it 'Has many - Se puede guardar un objeto si tiene sus valores dentro del rango requerido' do
+      tiff = Dog.new([5,99])
       tiff.save!
       expect(tiff.id).not_to eq nil
     end
 
     it 'No se puede guardar un objeto si tiene un valor menor al minimo requerido' do
-      nala = Bird.new
-      nala.name = "Nala"
-      nala.age = 2
+      nala = Cat.new(2)
       expect{nala.save!}.to raise_error 'The instance can not be smaller than the minimum required'
     end
 
-    it 'Se puede guardar un objeto si tiene un valor mayor al minimo requerido' do
-      alekai = Bird.new
-      alekai.name = "Alekai"
-      alekai.age = 6
+    it 'Se puede guardar un objeto si tiene un valor dentro del rango requerido' do
+      alekai = Cat.new(6)
       alekai.save!
       expect(alekai.id).not_to eq nil
     end
 
     it 'No se puede guardar un objeto si tiene un valor mayor al maximo requerido' do
-      olivia = Bird.new
-      olivia.name = "Olivia"
-      olivia.age = 50
+      olivia = Cat.new(50)
       expect{olivia.save!}.to raise_error 'The instance can not be bigger than the maximum required'
     end
   end
@@ -506,48 +606,38 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
     class Toy
       has_one String, named: :name
+
+      def initialize (name = nil)
+        @name = name
+      end
     end
 
-    class Cat
+    class Tiger
       has_many Toy, named: :toys, validate: proc{name.length > 4}
+
+      def initialize (toys = [])
+        @toys = toys
+      end
     end
 
     it 'Se puede guardar un objeto con composicion simple si cumple con la condición del bloque' do
-      mora = Cat.new
-      voleyball = Toy.new
-      voleyball.name = "Voleyball ball"
-      mora.toys.push(voleyball)
+      mora = Tiger.new([Toy.new("Voleyball ball")])
       mora.save!
       expect(mora.id).not_to eq nil
     end
 
     it 'No se puede guardar un objeto con composicion simple si no cumple con la condición del bloque' do
-      mora = Cat.new
-      ball = Toy.new
-      ball.name = "Ball"
-      mora.toys.push(ball)
+      mora = Tiger.new([Toy.new("ball")])
       expect {mora.save!}.to raise_error 'The instance has invalid values'
     end
 
     it 'No se puede guardar un objeto si no cumple con la condición del bloque' do
-      mora = Cat.new
-      ball = Toy.new
-      voleyball = Toy.new
-      voleyball.name = "Voleyball ball"
-      ball.name = "Ball"
-      mora.toys.push(ball)
-      mora.toys.push(voleyball)
+      mora = Tiger.new([Toy.new("Voleyball ball"), Toy.new("ball")])
       expect {mora.save!}.to raise_error 'The instance has invalid values'
     end
 
     it 'Se puede guardar un objeto compuesto si cumple con la condición del bloque' do
-      mora = Cat.new
-      ball = Toy.new
-      voleyball = Toy.new
-      voleyball.name = "Voleyball ball"
-      ball.name = "Balls"
-      mora.toys.push(ball)
-      mora.toys.push(voleyball)
+      mora = Tiger.new([Toy.new("Voleyball ball"), Toy.new("balls")])
       mora.save!
       expect(mora.id).not_to eq nil
     end
@@ -579,142 +669,6 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
 
   end
 
-
-
-  describe "Herencia" do
-
-    module Legajo
-      has_one Numeric, named: :legajo
-    end
-
-    module Address
-      has_one String, named: :street
-      has_one Numeric, named: :number
-    end
-
-
-    class Persons
-      include Legajo
-      has_one String, named: :first_name
-      has_one String, named: :last_name
-
-      attr_accessor :some_other_non_persistible_attribute
-    end
-
-
-
-    class Employe < Persons
-      include Address
-      has_one String, named: :role
-      has_one Boolean, named: :has_childrend
-
-    end
-
-
-    module Phone
-      has_one Numeric, named: :number
-    end
-
-
-    class Manager
-      include Phone
-      has_one String, named: :next_meeting
-    end
-
-    class Assistant
-      include Phone
-      has_one String, named: :name
-    end
-
-
-    let(:juan){Persons.new}
-    let(:juan_boss){Employe.new}
-
-    it 'se deberia persistir la clase que incluye un module persistible' do
-      juan_boss.role = "Boss"
-      juan_boss.first_name = "Juan"
-      juan_boss.last_name = "Perez"
-      juan_boss.legajo = 123456
-      juan_boss.street = "Calle Falsa"
-      juan_boss.number = 123
-      juan_boss.has_childrend = false
-      juan_boss.save!
-
-      juan.first_name = "Juan"
-      juan.last_name = "Perez"
-      juan.legajo = 123456
-      juan.save!
-      expect(juan.id).not_to eq(nil)
-    end
-
-    it 'se deberia persistir una herencia' do
-      juan_boss.role = "Boss"
-      juan_boss.first_name = "Juan"
-      juan_boss.last_name = "Perez"
-      juan_boss.legajo = 123456
-      juan_boss.street = "Calle Falsa"
-      juan_boss.number = 123
-      juan_boss.has_childrend = false
-      juan_boss.save!
-
-      juan.first_name = "Juan"
-      juan.last_name = "Perez"
-      juan.legajo = 123456
-      juan.save!
-      expect(Employe.all_instances).not_to eq([])
-    end
-
-    it 'all_instance de superclse debe traer todas las instacias de las subclases' do
-      juan_boss.role = "Boss"
-      juan_boss.first_name = "Juan"
-      juan_boss.last_name = "Perez"
-      juan_boss.legajo = 123456
-      juan_boss.street = "Calle Falsa"
-      juan_boss.number = 123
-      juan_boss.has_childrend = false
-      juan_boss.save!
-
-      juan.first_name = "Juan"
-      juan.last_name = "Perez"
-      juan.legajo = 123456
-      juan.save!
-      expect(Persons.all_instances.size).to eq(2)
-    end
-
-    it 'find_by en superclase debe traer elementos de subclases' do
-      juan_boss.role = "Boss"
-      juan_boss.first_name = "Juan"
-      juan_boss.last_name = "Perez"
-      juan_boss.legajo = 123456
-      juan_boss.street = "Calle Falsa"
-      juan_boss.number = 123
-      juan_boss.has_childrend = false
-      juan_boss.save!
-
-      juan.first_name = "Juan"
-      juan.last_name = "Perez"
-      juan.legajo = 123456
-      juan.save!
-      expect(Persons.all_instances.size).to eq(2)
-    end
-    #TODO agregar test por dos clases que incluyan un mismo modulo
-
-    it 'find_by en modulos incluidos en varias clases debe traer solo los elementos de la clase solicitada' do
-      m = Manager.new
-      m.number = 123
-      m.next_meeting = "Monday"
-      m.save!
-
-      a = Assistant.new
-      a.number = 211
-      a.name = "Juan"
-      a.save!
-
-      expect(Manager.all_instances.size).to eq(1)
-      expect(Assistant.all_instances.size).to eq(1)
-      expect(Phone.all_instances.size).to eq(2)
-    end
-  end
 
 end
 
