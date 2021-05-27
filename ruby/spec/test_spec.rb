@@ -17,8 +17,7 @@ class Grade
   end
 end
 
-describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
-
+describe "Persistencia de objetos" do
 
   after do
     TADB::DB.clear_all
@@ -220,8 +219,8 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
     class Nota
       has_one Numeric, named: :valor
 
-      def initialize (nota = nil)
-        @valor = nota
+      def initialize (valor = nil)
+        @valor = valor
       end
     end
 

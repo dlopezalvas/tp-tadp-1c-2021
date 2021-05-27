@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d003d345-ef6e-43ab-be9d-6223fec667c2" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/grupo11-2021-1c.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/grupo11-2021-1c.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ruby/spec/test_spec.rb" beforeDir="false" afterPath="$PROJECT_DIR$/ruby/spec/test_spec.rb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -43,7 +41,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="RSpec.Persistencia de objetos sen... (2)">
+  <component name="RunManager" selected="RSpec.Persistencia de objetos sen... (1)">
     <configuration name="Persistencia de objetos sen... (1)" type="RSpecRunConfigurationType" factoryName="RSpec" temporary="true" nameIsGenerated="true">
       <module name="grupo11-2021-1c" />
       <predefined_log_file enabled="true" id="RUBY_RSPEC" />
@@ -64,7 +62,7 @@
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_SCRIPT_PATHS" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_RUNNER_PATH" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_FILE_MASK" VALUE="**/*_spec.rb" />
-      <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_EXAMPLE_NAME" VALUE="Persistencia de objetos sencillos Valores por defecto Cuando inicializa la instancia le asigna el valor por defecto" />
+      <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_EXAMPLE_NAME" VALUE="Persistencia de objetos sencillos Herencia find_by en modulos incluidos en varias clases debe traer solo los elementos de la clase solicitada" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_TEST_TYPE" VALUE="TEST_SCRIPT" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_ARGS" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="RUNNER_VERSION" VALUE="" />
@@ -106,7 +104,7 @@
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="FULL_BACKTRACE" VALUE="false" />
       <method v="2" />
     </configuration>
-    <configuration name="Persistencia de objetos sen... (4)" type="RSpecRunConfigurationType" factoryName="RSpec" temporary="true" nameIsGenerated="true">
+    <configuration name="Persistencia de objetos sen... (3)" type="RSpecRunConfigurationType" factoryName="RSpec" temporary="true" nameIsGenerated="true">
       <module name="grupo11-2021-1c" />
       <predefined_log_file enabled="true" id="RUBY_RSPEC" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="RUBY_ARGS" VALUE="" />
@@ -126,7 +124,7 @@
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_SCRIPT_PATHS" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_RUNNER_PATH" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_FILE_MASK" VALUE="**/*_spec.rb" />
-      <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_EXAMPLE_NAME" VALUE="Persistencia de objetos sencillos Valores por defecto si se le asigna un valor distinto al default debe respetarlo" />
+      <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_EXAMPLE_NAME" VALUE="Persistencia de objetos sencillos Herencia se deberia persistir la clase que incluye un module persistible" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_TEST_TYPE" VALUE="TEST_SCRIPT" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_ARGS" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="RUNNER_VERSION" VALUE="" />
@@ -157,7 +155,7 @@
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_SCRIPT_PATHS" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_RUNNER_PATH" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_FILE_MASK" VALUE="**/*_spec.rb" />
-      <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_EXAMPLE_NAME" VALUE="Persistencia de objetos sencillos Validacion por bloque Se puede guardar un objeto compuesto si cumple con la condición del bloque" />
+      <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_EXAMPLE_NAME" VALUE="Persistencia de objetos sencillos Herencia se deberia persistir una herencia" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_TEST_TYPE" VALUE="TEST_SCRIPT" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_ARGS" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="RUNNER_VERSION" VALUE="" />
@@ -188,7 +186,7 @@
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_SCRIPT_PATHS" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_RUNNER_PATH" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_FILE_MASK" VALUE="**/*_spec.rb" />
-      <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_EXAMPLE_NAME" VALUE="Persistencia de objetos sencillos Validacion por bloque" />
+      <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_EXAMPLE_NAME" VALUE="Persistencia de objetos sencillos Herencia find_by en superclase debe traer elementos de subclases" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="TEST_TEST_TYPE" VALUE="TEST_SCRIPT" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="SPEC_ARGS" VALUE="" />
       <RSPEC_RUN_CONFIG_SETTINGS_ID NAME="RUNNER_VERSION" VALUE="" />
@@ -218,11 +216,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="RSpec.Persistencia de objetos sen... (2)" />
-        <item itemvalue="RSpec.Persistencia de objetos sen... (4)" />
         <item itemvalue="RSpec.Persistencia de objetos sen... (1)" />
         <item itemvalue="RSpec.Persistencia de objetos sen..." />
         <item itemvalue="RSpec.Persistencia de objetos sen... (5)" />
+        <item itemvalue="RSpec.Persistencia de objetos sen... (3)" />
+        <item itemvalue="RSpec.Persistencia de objetos sen... (2)" />
       </list>
     </recent_temporary>
   </component>
@@ -274,13 +272,13 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____3_.rcov" NAME="Persistencia de objetos sen... (3) Coverage Results" MODIFIED="1622078892282" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
-    <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen___.rcov" NAME="Persistencia de objetos sen... Coverage Results" MODIFIED="1622078925900" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
+    <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____3_.rcov" NAME="Persistencia de objetos sen... (3) Coverage Results" MODIFIED="1622079824118" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____4_.rcov" NAME="Persistencia de objetos sen... (4) Coverage Results" MODIFIED="1622078977141" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
+    <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen___.rcov" NAME="Persistencia de objetos sen... Coverage Results" MODIFIED="1622079878690" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@main.rcov" NAME="main Coverage Results" MODIFIED="1620769816904" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby/lib" MODULE_NAME="grupo11-2021-1c" />
-    <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____5_.rcov" NAME="Persistencia de objetos sen... (5) Coverage Results" MODIFIED="1622078911294" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____2_.rcov" NAME="Persistencia de objetos sen... (2) Coverage Results" MODIFIED="1622078990011" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
-    <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____1_.rcov" NAME="Persistencia de objetos sen... (1) Coverage Results" MODIFIED="1622078968735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
+    <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____5_.rcov" NAME="Persistencia de objetos sen... (5) Coverage Results" MODIFIED="1622079862529" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
+    <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____1_.rcov" NAME="Persistencia de objetos sen... (1) Coverage Results" MODIFIED="1622079946886" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@test_spec.rcov" NAME="test_spec Coverage Results" MODIFIED="1622077820108" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
   </component>
 </project>
