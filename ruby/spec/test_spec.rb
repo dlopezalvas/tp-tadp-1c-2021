@@ -320,11 +320,11 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
   describe 'Composicion con multiples objetos' do
     class Alumno
       has_one String, named: :nombre
-      has_many Nota, named: :nota
+      has_many Nota, named: :notas
 
       def initialize (nombre = nil, notas = [])
         @nombre = nombre
-        @nota = notas
+        @notas = notas
       end
 
     end
@@ -333,7 +333,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       clase = Class.new()
       clase.has_many Nota, named: :notas
       tomas = clase.new()
-      expect(tomas.nota).to eq []
+      expect(tomas.notas).to eq []
     end
 
     it 'Composicion con has_many' do
@@ -341,7 +341,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       otraNota = Nota.new(5)
       guido = Alumno.new("Guido Bevilacqua", [unaNota, otraNota])
       guido.save!
-      expect(guido.nota).to eq [unaNota, otraNota]
+      expect(guido.notas).to eq [unaNota, otraNota]
     end
 
     it 'Un objeto compuesto con has_many se puede refrescar' do
@@ -351,10 +351,10 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       guido.save!
       guido.notas.push(Nota.new(9))
       guido.refresh!
-      expect(guido.nota.map{|x| x.id}).to eq [unaNota.id, otraNota.id]
+      expect(guido.notas.map{|x| x.id}).to eq [unaNota.id, otraNota.id]
     end
 
-    it 'Un objeto compuesto con has_many borra las referencias a los objetos borrados' do
+    it 'Un objeto compuesto con has_many borra las referencias a los objetos borrados' do #TODO ver que rompe esto
       unaNota = Nota.new(8)
       otraNota = Nota.new(5)
       guido = Alumno.new("Guido Bevilacqua", [unaNota, otraNota])
@@ -362,7 +362,7 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
       unaNota.forget!
       otraNota.forget!
       guido.refresh!
-      expect(guido.nota.empty?).to eq true
+      expect(guido.notas.empty?).to eq true
     end
 
   end
@@ -396,8 +396,8 @@ describe "Persistencia de objetos sencillos" do #TODO cambiar nombre
   describe 'Validacion no_blank' do
     class Bird
       has_one String, named: :name, no_blank: true
-    end
 
+    end
 
     class Birds
       has_many String, named: :names, no_blank: true
