@@ -59,12 +59,6 @@ describe "Persistencia de objetos" do
       expect{persona.id}.to raise_error NoMethodError
     end
 
-    it 'un objeto persistible sin datos puede ser guardado' do
-      carlos = Person.new()
-      carlos.save!
-      expect(carlos.id).not_to eq nil
-    end
-
     it 'Un objeto persistible puede volver a guardarse despues de haber sido eliminado' do
       persona = Person.new("raul", "porcheto")
       persona.save!
