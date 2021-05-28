@@ -105,16 +105,19 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 send (setter attr), attr_final_value # seteo cada atributo con el valor dado por la entry de la tabla
             end
             get_multiple_attr.each do |attr|
-                elem_enum = (get_matching_entries attr).map do |entry| #TODO abstraer
-                    if is_persistible_object? attr[:type]
-                        (attr[:type].find_by_id entry[get_id_ attr[:named].to_s])[0]
-                    else
-                        entry[attr[:named]]
-                    end
-                end
-                send (setter attr), elem_enum.to_a
+                send (setter attr), (get_attr_values attr).to_a
             end
             self # es necesario retornar self por cómo está implementado instantiate
+        end
+
+        def get_attr_values attr
+            (get_matching_entries attr).map do |entry|
+                if is_persistible_object? attr[:type]
+                    (attr[:type].find_by_id entry[get_id_ attr[:named].to_s])[0]
+                else
+                    entry[attr[:named]]
+                end
+            end
         end
 
         def get_matching_entries attr
