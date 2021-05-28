@@ -57,15 +57,15 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def save!
             if @id
-               self.class.send :ORM_delete_entry, @id # TODO no estoy seguro de si esta línea es necesaria
-               self.class.send :ORM_delete_from_attr_tables, @id
+                self.class.send :ORM_delete_entry, @id
+                self.class.send :ORM_delete_from_attr_tables, @id
             else
                 define_singleton_method(:id) { @id } # TODO el getter se lo damos en la singleton sólo a los que están persistidos; consultar si está bien
                 self.class.send :create_method_find_by, "id"
             end
-            self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
-            self.validate!
-            (reject_nil_attr (get_non_multiple_attr)).each do |attr|
+            self_hashed = {}
+            validate!
+            reject_nil_attr(get_non_multiple_attr).each do |attr|
                 attr_value = send attr[:name]
                 if is_persistible_object? attr[:type]
                     self_hashed[attr[:name]] = attr_value.save! # se necesita salvar las composiciones simples primero para obtener el id que se guarda acá
@@ -76,29 +76,22 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             @id = self.class.send :ORM_insert, self_hashed # se guarda el id ahora porque para las composiciones múltiples se necesita tenerlo
             get_multiple_attr.each do |attr|
                 pair_hashed = {} # lo que se guardan son un par de ids que describen la relación de composición
-                pair_hashed[('id_' + self.class.name).to_sym] = @id
+                pair_hashed[get_id_ self.class.name] = @id
                 (send attr[:name]).each do |elem|
                     if is_persistible_object? attr[:type]
-                        pair_hashed[('id_' + attr[:name].to_s).to_sym] = elem.save!
+                        pair_hashed[get_id_ attr[:name].to_s] = elem.save!
                     else
                         pair_hashed[attr[:name]] = elem
                     end
-                    (self.class.send :ORM_attr_table, attr[:name]).insert pair_hashed
+                    (self.class.send :ORM_attr_table, attr[:name]).insert pair_hashed #inserta a la tabla
                 end
             end
-
             create_find_by
             return @id # es importante retornar el id para poder hacer save! con composición
         end
 
-        def create_find_by
-            self.class.instance_methods(false).reject{|method| method.to_s.end_with?("=") || method((method.to_sym)).arity > 0}.each do |method|
-                self.class.send :create_method_find_by, method.to_s
-            end
-        end
-
         def refresh!
-            exception_if_no_id
+            validate_id
             entry = self.class.send :ORM_get_entry, @id
             (reject_id(get_non_multiple_attr)).each do |attr|
                 if is_persistible_object? attr[:type]
@@ -112,10 +105,10 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 send (setter attr), attr_final_value # seteo cada atributo con el valor dado por la entry de la tabla
             end
             get_multiple_attr.each do |attr|
-                matching_entries = ((self.class.send :ORM_attr_table, attr[:name]).entries.select { |entry| entry[('id_' + self.class.name).to_sym] == @id })
+                matching_entries = ((self.class.send :ORM_attr_table, attr[:name]).entries.select { |entry| entry[get_id_ self.class.name] == @id })
                 elem_enum = matching_entries.map do |entry|
                     if is_persistible_object? attr[:type]
-                        (attr[:type].find_by_id entry[('id_' + attr[:name].to_s).to_sym])[0]
+                        (attr[:type].find_by_id entry[get_id_ attr[:name].to_s])[0]
                     else
                         entry[attr[:name]]
                     end
@@ -126,7 +119,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def forget! # se asume que no cascadea
-            exception_if_no_id
+            validate_id
             self.class.send :ORM_notify_deletion, @id
             self.class.send :ORM_delete_entry, @id
             self.class.send :ORM_delete_from_attr_tables, @id
@@ -138,9 +131,8 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             reject_id(get_non_multiple_attr).each do |attr|
                 attr_value = send attr[:name]
                 other_validations(attr, attr_value)
-                exception_if_invalid_values(!(attr_value == nil or attr_value.is_a? attr[:type]))
+                validate_values_by(!(attr_value == nil or attr_value.is_a? attr[:type]))
             end
-
             get_multiple_attr.each do |attr|
                 attr_value = send attr[:name]
                 attr_value.each do |elem|
@@ -153,6 +145,16 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         private
+
+        def create_find_by
+            self.class.instance_methods(false).reject{|method| method.to_s.end_with?("=") || method((method.to_sym)).arity > 0}.each do |method|
+                self.class.send :create_method_find_by, method.to_s
+            end
+        end
+
+        def get_id_ name
+            ('id_' + name).to_sym
+        end
 
         def initialize_persistible_lists
             get_multiple_attr.each do |attr|
@@ -211,13 +213,13 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        def exception_if_invalid_values(condition)
+        def validate_values_by(condition)
             if condition then raise 'The instance has invalid values'
             end
         end
 
-        def exception_if_no_id
-            if not @id then raise 'this instance is not persisted' end # TODO armar excepciones decentes
+        def validate_id
+            if not @id then raise 'this instance is not persisted' end
         end
 
         def is_persistible_object? type

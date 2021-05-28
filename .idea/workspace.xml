@@ -241,7 +241,7 @@
       <workItem from="1622087438140" duration="49000" />
       <workItem from="1622089080065" duration="3400000" />
       <workItem from="1622151994251" duration="242000" />
-      <workItem from="1622224834230" duration="3491000" />
+      <workItem from="1622224834230" duration="5110000" />
     </task>
     <servers />
   </component>
@@ -263,7 +263,7 @@
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____2_.rcov" NAME="Persistencia de objetos sen... (2) Coverage Results" MODIFIED="1622077677176" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@spec_helper.rcov" NAME="spec_helper Coverage Results" MODIFIED="1622224908218" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby/spec" MODULE_NAME="grupo11-2021-1c" />
-    <SUITE FILE_PATH="coverage/grupo11_2021_1c@test_spec.rcov" NAME="test_spec Coverage Results" MODIFIED="1622228298960" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
+    <SUITE FILE_PATH="coverage/grupo11_2021_1c@test_spec.rcov" NAME="test_spec Coverage Results" MODIFIED="1622229934583" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_Com___.rcov" NAME="Persistencia de objetos Com... Coverage Results" MODIFIED="1622091966787" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@Persistencia_de_objetos_sen_____3_.rcov" NAME="Persistencia de objetos sen... (3) Coverage Results" MODIFIED="1622077606409" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby" MODULE_NAME="grupo11-2021-1c" />
     <SUITE FILE_PATH="coverage/grupo11_2021_1c@main.rcov" NAME="main Coverage Results" MODIFIED="1620769816904" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="rcov" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ruby/lib" MODULE_NAME="grupo11-2021-1c" />
