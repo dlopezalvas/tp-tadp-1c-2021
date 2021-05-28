@@ -56,7 +56,7 @@ describe "Persistencia de objetos" do
 
     it 'un objeto persistible sin guardar no tiene un @id' do
       persona = Person.new("raul", "porcheto")
-      expect{persona.id}.to raise_error NoMethodError
+      expect(persona.id).to eq nil
     end
 
     it 'un objeto persistible sin datos puede ser guardado' do

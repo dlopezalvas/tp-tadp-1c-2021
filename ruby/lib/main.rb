@@ -23,6 +23,8 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
 
     module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
+        attr_reader :id
+
         def initialize (*args)
             initialize_persistible_lists
             initialize_default_attr
@@ -34,7 +36,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 self.class.send :ORM_delete_entry, @id
                 self.class.send :ORM_delete_from_attr_tables, @id
             else
-                define_singleton_method(:id) { @id } # TODO el getter se lo damos en la singleton sólo a los que están persistidos; consultar si está bien
                 self.class.send :create_method_find_by, "id"
             end
             self_hashed = {}
@@ -103,7 +104,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.class.send :ORM_notify_deletion, @id
             self.class.send :ORM_delete_entry, @id
             self.class.send :ORM_delete_from_attr_tables, @id
-            singleton_class.remove_method :id
             @id = nil # si no se hace esto, el id viejo queda volando adentro del objeto y al hacer un nuevo save! puede romper
         end
 
@@ -371,10 +371,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def instantiate entries # dada una lista de entries, devuelve la lista de instancias correspondientes
             entries.map do |entry|
                 instance = new
-                instance.define_singleton_method(:id) { @id }
-                instance.define_singleton_method(:id=) { |id| @id = id }
-                instance.id = entry[:id]
-                instance.singleton_class.remove_method(:id=) # este método se lo dábamos sólo para setearle el id acá adentro
+                instance.instance_eval { @id = entry[:id] }
                 instance.refresh!
             end
         end
