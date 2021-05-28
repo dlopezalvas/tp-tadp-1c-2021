@@ -337,7 +337,7 @@ describe "Persistencia de objetos" do
     end
 
 
-    it 'Un objeto compuesto con has_many borra las referencias a los objetos borrados' do #TODO ver que rompe esto
+    it 'Un objeto compuesto con has_many borra las referencias a los objetos borrados' do
       unaNota = Nota.new(8)
       otraNota = Nota.new(5)
       guido = Alumno.new("Guido Bevilacqua", [unaNota, otraNota])
@@ -447,7 +447,6 @@ describe "Persistencia de objetos" do
       juan.save!
       expect(Human.all_instances.size).to eq(2)
     end
-    #TODO agregar test por dos clases que incluyan un mismo modulo
 
     it 'find_by en modulos incluidos en varias clases debe traer solo los elementos de la clase solicitada' do
       m = Manager.new
