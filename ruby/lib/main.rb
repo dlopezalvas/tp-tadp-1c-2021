@@ -50,16 +50,8 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
     module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
         def initialize (*args)
-            ((self.class.ORM_get_persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
-                if (send attr[:name]) == nil
-                    send (attr[:name].to_s + '=').to_sym, [] # esto es sólo para inicializar las listas persistibles
-                end
-            end
-            (self.class.ORM_get_persistible_attrs).each do |attr|
-                if(attr[:name].to_s != 'id' and attr[:default])
-                    send (attr[:name].to_s + '=').to_sym, attr[:default]
-                end
-            end
+            initialize_persistible_lists
+            initialize_default_attr
             super *args
         end
 
@@ -73,20 +65,20 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             self_hashed = {} # TODO seguramente haya alguna forma de hacer esto más bonito pero anda
             self.validate!
-            ((self.class.ORM_get_persistible_attrs).reject { |attr| attr[:multiple] or ((send attr[:name]) == nil)}).each do |attr|
+            (reject_nil_attr (get_non_multiple_attr)).each do |attr|
                 attr_value = send attr[:name]
-                if attr[:type].ancestors.include? PersistibleObject #is_a? PersistibleModule # TODO abstraer?
+                if is_persistible_object? attr[:type]
                     self_hashed[attr[:name]] = attr_value.save! # se necesita salvar las composiciones simples primero para obtener el id que se guarda acá
                 else
                     self_hashed[attr[:name]] = attr_value
                 end
             end
             @id = self.class.send :ORM_insert, self_hashed # se guarda el id ahora porque para las composiciones múltiples se necesita tenerlo
-            ((self.class.ORM_get_persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
+            get_multiple_attr.each do |attr|
                 pair_hashed = {} # lo que se guardan son un par de ids que describen la relación de composición
                 pair_hashed[('id_' + self.class.name).to_sym] = @id
                 (send attr[:name]).each do |elem|
-                    if attr[:type].ancestors.include? PersistibleObject #.is_a? PersistibleModule # TODO abstraer?
+                    if is_persistible_object? attr[:type]
                         pair_hashed[('id_' + attr[:name].to_s).to_sym] = elem.save!
                     else
                         pair_hashed[attr[:name]] = elem
@@ -108,27 +100,27 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def refresh!
             exception_if_no_id
             entry = self.class.send :ORM_get_entry, @id
-            ((self.class.ORM_get_persistible_attrs).reject { |attr| attr[:multiple] or attr[:name] == :id}).each do |attr| # TODO abstraer
-                if attr[:type].ancestors.include? PersistibleObject #.is_a? PersistibleModule
+            (reject_id(get_non_multiple_attr)).each do |attr|
+                if is_persistible_object? attr[:type]
                     attr_final_value = (attr[:type].find_by_id entry[attr[:name]])[0]
                 else
                     attr_final_value = entry[attr[:name]]
                 end
-                if attr[:default] and attr_final_value == nil
+                if attr[:default] and attr_final_value == nil #TODO pasar al save y sacar condicion del reject
                     attr_final_value = attr[:default]
                 end
-                send (attr[:name].to_s + '=').to_sym, attr_final_value # seteo cada atributo con el valor dado por la entry de la tabla
+                send (setter attr), attr_final_value # seteo cada atributo con el valor dado por la entry de la tabla
             end
-            ((self.class.ORM_get_persistible_attrs).select { |attr| attr[:multiple] }).each do |attr|
+            get_multiple_attr.each do |attr|
                 matching_entries = ((self.class.send :ORM_attr_table, attr[:name]).entries.select { |entry| entry[('id_' + self.class.name).to_sym] == @id })
                 elem_enum = matching_entries.map do |entry|
-                    if attr[:type].ancestors.include? PersistibleObject #.is_a? PersistibleModule # TODO abstraer?
+                    if is_persistible_object? attr[:type]
                         (attr[:type].find_by_id entry[('id_' + attr[:name].to_s).to_sym])[0]
                     else
                         entry[attr[:name]]
                     end
                 end
-                send (attr[:name].to_s + '=').to_sym, elem_enum.to_a
+                send (setter attr), elem_enum.to_a
             end
             self # es necesario retornar self por cómo está implementado instantiate
         end
@@ -143,17 +135,15 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def validate!
-            ((self.class.ORM_get_persistible_attrs).reject { |attr| attr[:multiple] or attr[:name] == :id}).each do |attr|
+            reject_id(get_non_multiple_attr).each do |attr|
                 attr_value = send attr[:name]
                 other_validations(attr, attr_value)
                 exception_if_invalid_values(!(attr_value == nil or attr_value.is_a? attr[:type]))
             end
 
-            ((self.class.ORM_get_persistible_attrs).select { |attr| attr[:multiple]}).each do |attr|
+            get_multiple_attr.each do |attr|
                 attr_value = send attr[:name]
-                #TODO ver condiciones con has_many
                 attr_value.each do |elem|
-                    #TODO ver si deberia funciona con elementos no persistibles
                     other_validations(attr, elem)
                     if elem.is_a? PersistibleObject
                         elem.validate!
@@ -163,6 +153,26 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         private
+
+        def initialize_persistible_lists
+            get_multiple_attr.each do |attr|
+                if (send attr[:name]) == nil
+                    send (setter attr), [] # esto es sólo para inicializar las listas persistibles
+                end
+            end
+        end
+
+        def initialize_default_attr
+            (self.class.ORM_get_persistible_attrs).each do |attr|
+                if(attr[:name].to_s != 'id' and attr[:default])
+                    send (setter attr), attr[:default]
+                end
+            end
+        end
+
+        def setter attr
+            (attr[:name].to_s + '=').to_sym
+        end #esto es privado?
 
         def other_validations (attr, value)
             if attr[:blank]
@@ -209,6 +219,27 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def exception_if_no_id
             if not @id then raise 'this instance is not persisted' end # TODO armar excepciones decentes
         end
+
+        def is_persistible_object? type
+            type.ancestors.include? PersistibleObject
+        end
+
+        def get_non_multiple_attr
+            self.class.ORM_get_persistible_attrs.reject{ |attr| attr[:multiple]}
+        end
+
+        def get_multiple_attr
+            self.class.ORM_get_persistible_attrs.select{ |attr| attr[:multiple]}
+        end
+
+        def reject_nil_attr attr_list
+            attr_list.reject{|attr| (send attr[:name]) == nil}
+        end
+
+        def reject_id attr_list
+            attr_list.reject{|attr| attr[:name] == :id}
+        end
+
     end
 
 
@@ -274,7 +305,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        private :instantiate, :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_description, :ORM_get_all_deletion_observers
+        private :instantiate,  :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_description, :ORM_get_all_deletion_observers
     end
 
 
@@ -309,7 +340,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 else # si es composición simple, se debe traer el objeto a memoria, setear el atributo en nil, y darle save! de nuevo
                     intances_to_update = send ('find_by_' + attr[:name].to_s).to_sym, id
                     intances_to_update.each do |instance|
-                        instance.send (attr[:name].to_s + '=').to_sym, nil
+                        instance.send (setter attr), nil
                         instance.save!
                     end
                 end
