@@ -59,12 +59,6 @@ describe "Persistencia de objetos" do
       expect(persona.id).to eq nil
     end
 
-    it 'un objeto persistible sin datos puede ser guardado' do
-      carlos = Person.new()
-      carlos.save!
-      expect(carlos.id).not_to eq nil
-    end
-
     it 'Un objeto persistible puede volver a guardarse despues de haber sido eliminado' do
       persona = Person.new("raul", "porcheto")
       persona.save!
@@ -343,7 +337,7 @@ describe "Persistencia de objetos" do
     end
 
 
-    it 'Un objeto compuesto con has_many borra las referencias a los objetos borrados' do #TODO ver que rompe esto
+    it 'Un objeto compuesto con has_many borra las referencias a los objetos borrados' do
       unaNota = Nota.new(8)
       otraNota = Nota.new(5)
       guido = Alumno.new("Guido Bevilacqua", [unaNota, otraNota])
@@ -453,7 +447,6 @@ describe "Persistencia de objetos" do
       juan.save!
       expect(Human.all_instances.size).to eq(2)
     end
-    #TODO agregar test por dos clases que incluyan un mismo modulo
 
     it 'find_by en modulos incluidos en varias clases debe traer solo los elementos de la clase solicitada' do
       m = Manager.new

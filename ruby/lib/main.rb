@@ -1,8 +1,5 @@
 require 'tadb'
 
-# TODO abstraer transformaciones de símbolos
-# TODO abstraer todo lo posible juas
-
 class Module
 
     def has_one type, description
@@ -40,7 +37,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             self_hashed = {}
             validate!
-            reject_nil_attr(get_non_multiple_attr).each do |attr|
+            (get_non_multiple_attr).each do |attr|
                 attr_value = send attr[:named]
                 if is_persistible_object? attr[:type]
                     self_hashed[attr[:named]] = attr_value.save! # se necesita salvar las composiciones simples primero para obtener el id que se guarda acá
@@ -73,9 +70,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     attr_final_value = (attr[:type].find_by_id entry[attr[:named]])[0]
                 else
                     attr_final_value = entry[attr[:named]]
-                end
-                if attr[:default] and attr_final_value == nil #TODO pasar al save y sacar condicion del reject_id
-                    attr_final_value = attr[:default]
                 end
                 send (setter attr), attr_final_value # seteo cada atributo con el valor dado por la entry de la tabla
             end
@@ -111,6 +105,10 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             reject_id(get_non_multiple_attr).each do |attr|
                 attr_value = send attr[:named]
                 other_validations(attr, attr_value)
+                if attr[:default] and attr_value == nil
+                    attr_value = attr[:default]
+                    send (setter attr), attr_value
+                end
                 validate_values_by(!(attr_value == nil or attr_value.is_a? attr[:type]))
             end
             get_multiple_attr.each do |attr|
@@ -228,7 +226,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
 
         def ORM_add_persistible_attr type, description, is_multiple:
-            if type.is_a? ORM::PersistibleModule # TODO y si ese type se hace persistible más adelante?
+            if type.is_a? ORM::PersistibleModule
                 type.send :ORM_add_deletion_observer, self
             end
             if not @persistible_attrs
@@ -256,7 +254,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             ORM_add_descendant includer_module
         end
 
-        # TODO armar un module a modo de namespace para los métodos ORM_*?
         def ORM_add_descendant descendant
             # return if (descendant.singleton_class.ancestors & [PersistibleModule, PersistibleClass]).empty?
             @descendants << descendant
@@ -271,7 +268,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def ORM_get_all_deletion_observers
-            @descendants + @deletion_observers # TODO sacar duplicados? creo que da igual
+            @descendants | @deletion_observers
         end
 
         def ORM_notify_deletion id # para notificar a las clases (observers) que se borró un id; para mantener consistencia
