@@ -25,8 +25,8 @@ class Module
         @persistible_attrs.delete_if { |attr| attr[:named] == attr_name }
         @persistible_attrs << {named: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
         @descendants.each do |descendant|
-            if not descendant.instance_methods(false).include? attr_name
-                descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple # TODO abstraer
+            if not descendant.instance_methods(false).include? attr_name #evita que superclase pise metodos de subclases
+                descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple
             end
         end
         attr_accessor attr_name # define getters+setters para los objetos
@@ -293,19 +293,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.define_singleton_method (selector) { |param| all_instances.select { |elem| (elem.send (name.to_sym)) == param } }
         end
 
-        # TODO mover esto a *Class
-        def instantiate entries # dada una lista de entries, devuelve la lista de instancias correspondientes
-            entries.map do |entry|
-                instance = new
-                instance.define_singleton_method(:id) { @id }
-                instance.define_singleton_method(:id=) { |id| @id = id }
-                instance.id = entry[:id]
-                instance.singleton_class.remove_method(:id=) # este método se lo dábamos sólo para setearle el id acá adentro
-                instance.refresh! # TODO teniendo el id bien, refresh trae el resto de los datos (para no repetir lógica); no es muy performante igual porque el refresh implica una búsqueda en la tabla cuando la información ya la tenemos en la entry. habría que optimizar sin repetir lógica
-            end
-        end
-
-        private :instantiate,  :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers
+        private  :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers
     end
 
 
@@ -363,7 +351,18 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
            end
         end
 
-        private :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table, :ORM_delete_from_attr_tables
+        def instantiate entries # dada una lista de entries, devuelve la lista de instancias correspondientes
+            entries.map do |entry|
+                instance = new
+                instance.define_singleton_method(:id) { @id }
+                instance.define_singleton_method(:id=) { |id| @id = id }
+                instance.id = entry[:id]
+                instance.singleton_class.remove_method(:id=) # este método se lo dábamos sólo para setearle el id acá adentro
+                instance.refresh!
+            end
+        end
+
+        private :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table, :ORM_delete_from_attr_tables
     end
 end
 
