@@ -5,48 +5,22 @@ require 'tadb'
 
 class Module
 
-    def ORM_add_persistible_attr type, description, is_multiple:
-        if type.is_a? ORM::PersistibleModule # TODO y si ese type se hace persistible más adelante?
-            type.send :ORM_add_deletion_observer, self
-        end
-        if not @persistible_attrs
-            if self.class == Class
-                extend ORM::PersistibleClass
-                prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
-                @table = TADB::DB.table(name)
-            else
-                extend ORM::PersistibleModule
-            end
-            @descendants = []
-            @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
-            @persistible_attrs = [{named: :id, type: String, multiple: false, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]}] # la metadata de cada columna de la tabla
-        end
-        attr_name = description[:named]
-        @persistible_attrs.delete_if { |attr| attr[:named] == attr_name }
-        @persistible_attrs << {named: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
-        @descendants.each do |descendant|
-            if not descendant.instance_methods(false).include? attr_name #evita que superclase pise metodos de subclases
-                descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple
-            end
-        end
-        attr_accessor attr_name # define getters+setters para los objetos
-    end
-
     def has_one type, description
-        #extend ORM::PersistibleModule
+        extend ORM::PersistibleModule
         ORM_add_persistible_attr type, description, is_multiple: false
     end
 
     def has_many type, description
-        #extend ORM::PersistibleModule
+        extend ORM::PersistibleModule
         ORM_add_persistible_attr type, description, is_multiple: true
     end
 
-    private :ORM_add_persistible_attr
 end
 
 
 module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la idea es no contaminar el namespace
+
+
 
     module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
         def initialize (*args)
@@ -152,14 +126,14 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         private
 
+        def get_id_ name
+            ('id_' + name).to_sym
+        end
+
         def create_find_by
             self.class.instance_methods(false).reject{|method| method.to_s.end_with?("=") || method((method.to_sym)).arity > 0}.each do |method|
                 self.class.send :create_method_find_by, method.to_s
             end
-        end
-
-        def get_id_ name
-            ('id_' + name).to_sym
         end
 
         def initialize_persistible_lists
@@ -253,6 +227,33 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
 
+        def ORM_add_persistible_attr type, description, is_multiple:
+            if type.is_a? ORM::PersistibleModule # TODO y si ese type se hace persistible más adelante?
+                type.send :ORM_add_deletion_observer, self
+            end
+            if not @persistible_attrs
+                if self.class == Class
+                    extend ORM::PersistibleClass
+                    prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
+                    @table = TADB::DB.table(name)
+                else
+                    extend ORM::PersistibleModule
+                end
+                @descendants = []
+                @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
+                @persistible_attrs = [{named: :id, type: String, multiple: false, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]}] # la metadata de cada columna de la tabla
+            end
+            attr_name = description[:named]
+            @persistible_attrs.delete_if { |attr| attr[:named] == attr_name }
+            @persistible_attrs << {named: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
+            @descendants.each do |descendant|
+                if not descendant.instance_methods(false).include? attr_name #evita que superclase pise metodos de subclases
+                    descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple
+                end
+            end
+            attr_accessor attr_name # define getters+setters para los objetos
+        end
+
         def included includer_module
             ORM_add_descendant includer_module
         end
@@ -262,6 +263,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             # return if (descendant.singleton_class.ancestors & [PersistibleModule, PersistibleClass]).empty?
             @descendants << descendant
             @persistible_attrs.each do |attr|
+                descendant.extend PersistibleModule
                 descendant.send :ORM_add_persistible_attr, attr[:type], attr, is_multiple: attr[:multiple]
             end
         end
@@ -316,23 +318,36 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             @table.delete id
         end
 
-        def ORM_wipe_references_to type, id # acá se recibe todo id que haya sido borrado de la tabla de su clase, cuya clase forme parte de una composición con esta clase receptora
-            (@persistible_attrs.select { |attr| attr[:type] == type }).each do |attr| #TODO borra todo lo del mismo tipo
+        def get_persistible_attr_by_type type
+            @persistible_attrs.select { |attr| attr[:type] == type }
+        end
+
+        def ORM_wipe_references_to type, id # acá se recibe todoo id que haya sido borrado de la tabla de su clase, cuya clase forme parte de una composición con esta clase receptora
+            (get_persistible_attr_by_type type).each do |attr|
                 if (all_instances.empty?)
                     return
                 end
                 if attr[:multiple] # si es composición multiple se borran las entries correspondientes en la tabla de la relación entre las dos clases
-                   ((ORM_attr_table attr[:named]).entries.select { |entry| entry[('id_' + attr[:named].to_s).to_sym] == id }).each do |entry|
+                    (get_entries_referencing_id attr[:named], id ).each do |entry|
                         (ORM_attr_table attr[:named]).delete entry[:id]
                     end
                 else # si es composición simple, se debe traer el objeto a memoria, setear el atributo en nil, y darle save! de nuevo
-                    intances_to_update = send ('find_by_' + attr[:named].to_s).to_sym, id
+                    intances_to_update = send (get_find_by attr[:named]), id
                     intances_to_update.each do |instance|
                         instance.send (setter attr), nil
                         instance.save!
                     end
                 end
             end
+
+        end
+
+        def get_find_by name
+            ('find_by_' + name.to_s).to_sym
+        end
+
+        def get_entries_referencing_id attr_name , id
+            ((ORM_attr_table attr_name).entries.select { |entry| entry[id_getter attr_name.to_s] == id })
         end
 
         def ORM_attr_table attr_name_symbol # getter de la tabla correspondiente a una relación por has_many
@@ -345,10 +360,14 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def ORM_delete_from_attr_tables id
            (@persistible_attrs.select { |attr| attr[:multiple] }).each do |attr|
-               ((ORM_attr_table attr[:named]).entries.select { |entry| entry[('id_' + name).to_sym] == id }).each do |entry|
+               (get_entries_referencing_id attr[:named], id).each do |entry|
                     (ORM_attr_table attr[:named]).delete entry[:id]
                 end
            end
+        end
+
+        def id_getter name
+            ('id_' + name).to_sym
         end
 
         def instantiate entries # dada una lista de entries, devuelve la lista de instancias correspondientes
@@ -362,7 +381,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        private :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table, :ORM_delete_from_attr_tables
+        private :ORM_add_persistible_attr, :get_persistible_attr_by_type, :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table, :ORM_delete_from_attr_tables
     end
 end
 
