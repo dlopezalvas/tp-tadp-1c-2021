@@ -236,8 +236,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     extend ORM::PersistibleClass
                     prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
                     @table = TADB::DB.table(name)
-                else
-                    extend ORM::PersistibleModule
                 end
                 @descendants = []
                 @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
