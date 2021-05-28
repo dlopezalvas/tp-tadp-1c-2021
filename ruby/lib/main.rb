@@ -1,5 +1,6 @@
 require 'tadb'
 
+
 class Module
 
     def has_one type, description
@@ -17,8 +18,6 @@ end
 
 module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la idea es no contaminar el namespace
 
-
-
     module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
         attr_reader :id
 
@@ -29,12 +28,8 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def save!
-            if @id
-                self.class.send :ORM_delete_entry, @id
-                self.class.send :ORM_delete_from_attr_tables, @id
-            else
-                self.class.send :create_method_find_by, "id"
-            end
+            self.class.send :ORM_delete_entry, @id
+            self.class.send :ORM_delete_from_attr_tables, @id
             self_hashed = {}
             validate!
             (get_non_multiple_attr).each do |attr|
@@ -58,7 +53,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     (self.class.send :ORM_attr_table, attr[:named]).insert pair_hashed #inserta a la tabla
                 end
             end
-            create_find_by
             return @id # es importante retornar el id para poder hacer save! con composición
         end
 
@@ -77,20 +71,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 send (setter attr), (get_attr_values attr).to_a
             end
             self # es necesario retornar self por cómo está implementado instantiate
-        end
-
-        def get_attr_values attr
-            (get_matching_entries attr).map do |entry|
-                if is_persistible_object? attr[:type]
-                    (attr[:type].find_by_id entry[get_id_ attr[:named].to_s])[0]
-                else
-                    entry[attr[:named]]
-                end
-            end
-        end
-
-        def get_matching_entries attr
-            ((self.class.send :ORM_attr_table, attr[:named]).entries.select { |entry| entry[get_id_ self.class.name] == @id })
         end
 
         def forget! # se asume que no cascadea
@@ -124,14 +104,22 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         private
 
-        def get_id_ name
-            ('id_' + name).to_sym
+        def get_attr_values attr
+            (get_matching_entries attr).map do |entry|
+                if is_persistible_object? attr[:type]
+                    (attr[:type].find_by_id entry[get_id_ attr[:named].to_s])[0]
+                else
+                    entry[attr[:named]]
+                end
+            end
         end
 
-        def create_find_by
-            self.class.instance_methods(false).reject{|method| method.to_s.end_with?("=") || method((method.to_sym)).arity > 0}.each do |method|
-                self.class.send :create_method_find_by, method.to_s
-            end
+        def get_matching_entries attr
+            (self.class.send :ORM_attr_table, attr[:named]).entries.select { |entry| entry[get_id_ self.class.name] == @id }
+        end
+
+        def get_id_ name
+            ('id_' + name).to_sym
         end
 
         def initialize_persistible_lists
@@ -224,6 +212,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
+        def method_added method_name
+            if (method_name[-1] != '=') and ((instance_method method_name).arity == 0)
+                create_method_find_by method_name
+            end
+        end
 
         def ORM_add_persistible_attr type, description, is_multiple:
             if type.is_a? ORM::PersistibleModule
@@ -231,6 +224,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             if not @persistible_attrs
                 if self.class == Class
+                    create_find_by
                     extend ORM::PersistibleClass
                     prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
                     @table = TADB::DB.table(name)
@@ -248,10 +242,18 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 end
             end
             attr_accessor attr_name # define getters+setters para los objetos
+            create_method_find_by attr_name
         end
 
         def included includer_module
             ORM_add_descendant includer_module
+        end
+
+        def create_find_by
+            create_method_find_by 'id'
+            instance_methods(false).reject{|method| method.to_s.end_with?("=") || instance_method((method.to_sym)).arity > 0}.each do |method|
+                create_method_find_by method.to_s
+            end
         end
 
         def ORM_add_descendant descendant
