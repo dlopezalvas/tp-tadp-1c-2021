@@ -213,7 +213,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
         def method_added method_name
-            if (!method_name.to_s.end_with?("=") && instance_method((method_name.to_sym)).arity == 0)
+            if (!method_name.to_s.end_with?("=") && instance_method(method_name).arity == 0)
                 create_method_find_by method_name
             end
         end
