@@ -175,7 +175,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def validate_block(value, &block)
-            if not value.instance_eval(&block) then raise 'The instance has invalid values'
+            unless value.instance_eval(&block) then raise 'The instance has invalid values'
             end
         end
 
@@ -213,7 +213,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
         def method_added method_name
-            if (!method_name.to_s.end_with?("=") && instance_method((method_name.to_sym)).arity == 0)
+            if valid_find_by_method method_name
                 create_method_find_by method_name
             end
         end
@@ -222,9 +222,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             if type.is_a? ORM::PersistibleModule
                 type.send :ORM_add_deletion_observer, self
             end
-            if not @persistible_attrs
+            unless @persistible_attrs
                 if self.class == Class
-                    create_method_find_by 'id'
+                    initialize_find_by_methods
                     extend ORM::PersistibleClass
                     prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
                     @table = TADB::DB.table(name)
@@ -237,7 +237,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             @persistible_attrs.delete_if { |attr| attr[:named] == attr_name }
             @persistible_attrs << {named: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
             @descendants.each do |descendant|
-                if not descendant.instance_methods(false).include? attr_name #evita que superclase pise metodos de subclases
+                unless descendant.instance_methods(false).include? attr_name #evita que superclase pise metodos de subclases
                     descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple
                 end
             end
@@ -246,6 +246,17 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def included includer_module
             ORM_add_descendant includer_module
+        end
+
+        def valid_find_by_method method_name
+            !method_name.end_with?("=") && instance_method((method_name)).arity == 0
+        end
+
+        def initialize_find_by_methods
+            create_method_find_by 'id'
+            instance_methods(false).select{|method| valid_find_by_method method}.each do |method|
+                create_method_find_by method
+            end
         end
 
         def ORM_add_descendant descendant
@@ -284,7 +295,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.define_singleton_method (selector) { |param| all_instances.select { |elem| (elem.send (name.to_sym)) == param } }
         end
 
-        private  :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers
+        private  :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers, :valid_find_by_method, :create_method_find_by, :initialize_find_by_methods
     end
 
 

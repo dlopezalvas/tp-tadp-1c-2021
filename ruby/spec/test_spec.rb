@@ -186,6 +186,18 @@ describe "Persistencia de objetos" do
       expect((Student.find_by_promoted(true)).first.id).to eq (nahuel.id)
     end
 
+    it 'Se puede buscar por un metodo creado antes de ser persistible' do
+      class UnaClase
+        def metodo
+          return true
+        end
+      end
+      class UnaClase
+        has_one String, named: :nombre
+      end
+      expect{UnaClase.find_by_metodo true}.not_to raise_error
+    end
+
     it 'Se puede buscar un objeto con un metodo especifico' do
       nahuel = Student.new("Nahuel Rodriguez", 5)
       nahuel.save!
