@@ -405,7 +405,6 @@ describe "Persistencia de objetos" do
 
     end
 
-
     let(:juan){Human.new}
     let(:juan_boss){Employee.new}
 
@@ -465,6 +464,11 @@ describe "Persistencia de objetos" do
       m.number = 123
       m.next_meeting = "Monday"
       m.save!
+
+      a = Assistant.new
+      a.number = 1234
+      a.name = 'pepito'
+      a.save!
 
       expect(Manager.all_instances.size).to eq(1)
     end

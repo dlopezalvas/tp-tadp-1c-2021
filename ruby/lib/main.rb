@@ -95,9 +95,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 attr_value = send attr[:named]
                 attr_value.each do |elem|
                     other_validations(attr, elem)
-                    if elem.is_a? PersistibleObject
-                        elem.validate!
-                    end
+                    elem.validate! if elem.is_a? PersistibleObject
                 end
             end
         end
@@ -223,7 +221,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 type.send :ORM_add_deletion_observer, self
             end
             unless @persistible_attrs
-                if self.class == Class
+                if self.is_a? Class
                     initialize_find_by_methods
                     extend ORM::PersistibleClass
                     prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
@@ -249,12 +247,12 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def valid_find_by_method method_name
-            !method_name.end_with?("=") && instance_method((method_name)).arity == 0
+            instance_method((method_name)).arity == 0
         end
 
         def initialize_find_by_methods
             create_method_find_by 'id'
-            instance_methods(false).select{|method| valid_find_by_method method}.each do |method|
+            instance_methods(false).select{|method| valid_find_by_method method}.each do |method| # TODO y los métodos heredados?
                 create_method_find_by method
             end
         end
