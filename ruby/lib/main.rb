@@ -24,18 +24,22 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     end
 
     class Validation_no_blank
+        def initialize needs_validation
+            @needs_validation = needs_validation
+        end
+
         def validate(value)
-            if value.nil? || value.empty? then raise ORM_Error.new("The instance can not be nil nor empty")
+            if @needs_validation and (value.nil? || value.empty?) then raise ORM_Error.new("The instance can not be nil nor empty")
             end
         end
     end
 
     class Validation_by_block
-        def initialize &block #TODO replanteate tu existencia
-            @block = proc{|x| x.instance_eval(&block)}
+        def initialize validation_proc #TODO replanteate tu existencia
+            @block = validation_proc
         end
-        def validate_block value
-            unless call(@block , value) then raise ORM_Error.new('The instance has invalid values')
+        def validate value
+            unless @block.call(value) then raise ORM_Error.new('The instance has invalid values')
             end
         end
     end
@@ -44,7 +48,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def initialize max
             @max = max
         end
-        def validate_to value
+        def validate value
             if value > @max then raise ORM_Error.new('The instance can not be bigger than the maximum required')
             end
         end
@@ -126,7 +130,10 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def validate!
             reject_id(get_non_multiple_attr).each do |attr|
                 attr_value = send attr[:named]
-                other_validations(attr, attr_value)
+                #other_validations(attr, attr_value)
+                attr[:validations].each do |validation|
+                    validation.validate attr_value
+                end
                 if attr[:default] and attr_value == nil
                     attr_value = attr[:default]
                     send (setter attr), attr_value
@@ -136,7 +143,10 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             get_multiple_attr.each do |attr|
                 attr_value = send attr[:named]
                 attr_value.each do |elem|
-                    other_validations(attr, elem)
+                    #other_validations(attr, elem)
+                    attr[:validations].each do |validation|
+                        validation.validate elem
+                    end
                     elem.validate! if elem.is_a? PersistibleObject
                 end
             end
@@ -274,11 +284,20 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 end
                 @descendants = []
                 @deletion_observers = [] # tiene las clases a las que hay que notificar borrados para no perder consistencia por ids ya inexistentes que queden volando por ahí
-                @persistible_attrs = [{named: :id, type: String, multiple: false, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]}] # la metadata de cada columna de la tabla
+                @persistible_attrs = [{named: :id, type: String, multiple: false}]
             end
             attr_name = description[:named]
             @persistible_attrs.delete_if { |attr| attr[:named] == attr_name }
-            @persistible_attrs << {named: attr_name, type: type, multiple: is_multiple, default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
+            validations = [
+                [Validation_no_blank, description[:no_blank]],
+                [Validation_from, description[:from]],
+                [Validation_to, description[:to]],
+            ]
+            validations << [Validation_by_block, proc{|x| x.instance_eval(&description[:validate])}] if description[:validate] # TODO ver si se puede tratar como caso normal en vez de especial (como los demas)
+            validations = validations.reject{|val| val[1] == nil}.map do |val|
+                val[0].new val[1]
+            end
+            @persistible_attrs << {named: attr_name, type: type, multiple: is_multiple, default: description[:default], validations: validations} # default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
             @descendants.each do |descendant|
                 unless descendant.instance_methods(false).include? attr_name #evita que superclase pise metodos de subclases
                     descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple
