@@ -237,7 +237,6 @@ describe "Persistencia de objetos" do
 
       roberto = ClaseHija.new
       roberto.nombre = "roberto"
-      roberto.cosa = "algo"
       roberto.save!
       expect((ClaseHija.find_by_esRoberto true).first.id).to eq(roberto.id)
     end

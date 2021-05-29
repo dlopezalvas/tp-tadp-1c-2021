@@ -23,6 +23,43 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
     end
 
+    class Validation_no_blank
+        def validate(value)
+            if value.nil? || value.empty? then raise ORM_Error.new("The instance can not be nil nor empty")
+            end
+        end
+    end
+
+    class Validation_by_block
+        def initialize &block #TODO replanteate tu existencia
+            @block = proc{|x| x.instance_eval(&block)}
+        end
+        def validate_block value
+            unless call(@block , value) then raise ORM_Error.new('The instance has invalid values')
+            end
+        end
+    end
+
+    class Validation_to
+        def initialize max
+            @max = max
+        end
+        def validate_to value
+            if value > @max then raise ORM_Error.new('The instance can not be bigger than the maximum required')
+            end
+        end
+    end
+
+    class Validation_from
+        def initialize min
+            @min = min
+        end
+        def validate value
+            if value < @min then raise ORM_Error.new('The instance can not be smaller than the minimum required')
+            end
+        end
+    end
+
     module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
         attr_reader :id
 
@@ -37,7 +74,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.class.send :ORM_delete_from_attr_tables, @id
             self_hashed = {}
             validate!
-            (get_non_multiple_attr).each do |attr|
+            (reject_nil_attr get_non_multiple_attr).each do |attr|
                 attr_value = send attr[:named]
                 if is_persistible_object? attr[:type]
                     self_hashed[attr[:named]] = attr_value.save! # se necesita salvar las composiciones simples primero para obtener el id que se guarda acá
@@ -46,7 +83,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 end
             end
             @id = self.class.send :ORM_insert, self_hashed # se guarda el id ahora porque para las composiciones múltiples se necesita tenerlo
-            get_multiple_attr.each do |attr|
+            (get_multiple_attr).each do |attr|
                 pair_hashed = {} # lo que se guardan son un par de ids que describen la relación de composición
                 pair_hashed[get_id_ self.class.name] = @id
                 (send attr[:named]).each do |elem|
@@ -94,9 +131,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     attr_value = attr[:default]
                     send (setter attr), attr_value
                 end
-                validate_values_by(!(attr_value == nil or attr_value.is_a? attr[:type])) #TODO ver si el attr_value == nil va
+                validate_values_by((attr_value.is_a? attr[:type] or attr_value == nil))
             end
-            get_multiple_attr.each do |attr| #TODO agregar validacion del tipo
+            get_multiple_attr.each do |attr|
                 attr_value = send attr[:named]
                 attr_value.each do |elem|
                     other_validations(attr, elem)
@@ -149,7 +186,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             if attr[:blank]
                 validate_blank(value)
             end
-            if value.is_a? Numeric #TODO tirar excepcion si se intenta crear algo que no sea numeric con from: o to:
+            if value.is_a? Numeric
                 if attr[:from]
                     validate_from(attr[:from], value)
                 end
@@ -161,6 +198,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 validate_block(value, &attr[:validate])
             end
         end
+
 
         def validate_blank(value)
             if value.nil? || value.empty? then raise ORM_Error.new("The instance can not be nil nor empty")
@@ -183,13 +221,14 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def validate_values_by(condition)
-            if condition then raise ORM_Error.new('The instance has invalid values')
+            unless condition then raise ORM_Error.new('The instance has invalid values')
             end
         end
 
         def validate_id
             if not @id then raise ORM_Error.new('this instance is not persisted') end
         end
+
 
         def is_persistible_object? type
             type.ancestors.include? PersistibleObject
@@ -225,6 +264,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             if type.is_a? ORM::PersistibleModule
                 type.send :ORM_add_deletion_observer, self
             end
+            #TODO tirar excepcion si se intenta crear algo que no sea numeric con from: o to:
             unless @persistible_attrs
                 if self.is_a? Class
                     initialize_find_by_methods
