@@ -1,6 +1,5 @@
 require 'tadb'
 
-#TODO crear nuestras propias excepciones
 class Module
 
     def has_one type, description
@@ -257,7 +256,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def initialize_find_by_methods
-            create_method_find_by 'id' #TODO sacar el false de instance methods + tests de los metodos heredados
+            create_method_find_by 'id'
             instance_methods(false).select{|method| valid_find_by_method method}.each do |method|
                 create_method_find_by method
             end

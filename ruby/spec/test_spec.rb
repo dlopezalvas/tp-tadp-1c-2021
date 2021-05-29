@@ -164,8 +164,9 @@ describe "Persistencia de objetos" do
       def promoted
         self.grade > 8
       end
-
     end
+
+
 
 
     it 'No se puede buscar un objeto con un metodo especifico que recibe argumentos' do
@@ -216,6 +217,29 @@ describe "Persistencia de objetos" do
 
     it 'No se puede buscar por un metodo que no existe' do
       expect{Student.find_by_address "calle falsa 123"}.to raise_error NoMethodError
+    end
+
+
+    it 'Se puede buscar por metodos de una clase de la que hereda' do
+      class ClasePadre
+        has_one String, named: :nombre
+      end
+
+      class ClaseHija < ClasePadre
+        has_one String, named: :cosa
+      end
+
+      class ClasePadre
+        def esRoberto
+          nombre == "roberto"
+        end
+      end
+
+      roberto = ClaseHija.new
+      roberto.nombre = "roberto"
+      roberto.cosa = "algo"
+      roberto.save!
+      expect((ClaseHija.find_by_esRoberto true).first.id).to eq(roberto.id)
     end
 
   end
@@ -442,7 +466,7 @@ describe "Persistencia de objetos" do
       expect(Employee.all_instances).not_to eq([])
     end
 
-    it 'find_by en superclase debe traer elementos de subclases' do
+    it 'all_instances en superclase debe traer elementos de subclases' do
       juan_boss.role = "Boss"
       juan_boss.first_name = "Juan"
       juan_boss.last_name = "Perez"
@@ -459,7 +483,7 @@ describe "Persistencia de objetos" do
       expect(Human.all_instances.size).to eq(2)
     end
 
-    it 'find_by en modulos incluidos en varias clases debe traer solo los elementos de la clase solicitada' do
+    it 'all_instances en modulos incluidos en varias clases debe traer solo los elementos de la clase solicitada' do
       m = Manager.new
       m.number = 123
       m.next_meeting = "Monday"
@@ -472,6 +496,7 @@ describe "Persistencia de objetos" do
 
       expect(Manager.all_instances.size).to eq(1)
     end
+
   end
 
   describe 'validate!' do
