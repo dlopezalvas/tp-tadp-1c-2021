@@ -1,6 +1,6 @@
 require 'tadb'
 
-
+#TODO crear nuestras propias excepciones
 class Module
 
     def has_one type, description
@@ -17,6 +17,12 @@ end
 
 
 module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la idea es no contaminar el namespace
+
+    class ORM_Error < StandardError
+        def initialize(msg="Error")
+            super(msg)
+        end
+    end
 
     module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
         attr_reader :id
@@ -89,9 +95,9 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                     attr_value = attr[:default]
                     send (setter attr), attr_value
                 end
-                validate_values_by(!(attr_value == nil or attr_value.is_a? attr[:type]))
+                validate_values_by(!(attr_value == nil or attr_value.is_a? attr[:type])) #TODO ver si el attr_value == nil va
             end
-            get_multiple_attr.each do |attr|
+            get_multiple_attr.each do |attr| #TODO agregar validacion del tipo
                 attr_value = send attr[:named]
                 attr_value.each do |elem|
                     other_validations(attr, elem)
@@ -140,11 +146,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             (attr[:named].to_s + '=').to_sym
         end #esto es privado?
 
-        def other_validations (attr, value)
+        def other_validations (attr, value) #TODO cada validacion es una clase y las podemos tener en hash
             if attr[:blank]
                 validate_blank(value)
             end
-            if value.is_a? Numeric
+            if value.is_a? Numeric #TODO tirar excepcion si se intenta crear algo que no sea numeric con from: o to:
                 if attr[:from]
                     validate_from(attr[:from], value)
                 end
@@ -158,32 +164,32 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def validate_blank(value)
-            if value.nil? || value.empty? then raise 'The instance can not be nil nor empty'
+            if value.nil? || value.empty? then raise ORM_Error.new("The instance can not be nil nor empty")
             end
         end
 
         def validate_from(min, value)
-            if value < min then raise 'The instance can not be smaller than the minimum required'
+            if value < min then raise ORM_Error.new('The instance can not be smaller than the minimum required')
             end
         end
 
         def validate_to(max, value)
-            if value > max then raise 'The instance can not be bigger than the maximum required'
+            if value > max then raise ORM_Error.new('The instance can not be bigger than the maximum required')
             end
         end
 
         def validate_block(value, &block)
-            unless value.instance_eval(&block) then raise 'The instance has invalid values'
+            unless value.instance_eval(&block) then raise ORM_Error.new('The instance has invalid values')
             end
         end
 
         def validate_values_by(condition)
-            if condition then raise 'The instance has invalid values'
+            if condition then raise ORM_Error.new('The instance has invalid values')
             end
         end
 
         def validate_id
-            if not @id then raise 'this instance is not persisted' end
+            if not @id then raise ORM_Error.new('this instance is not persisted') end
         end
 
         def is_persistible_object? type
@@ -216,7 +222,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        def ORM_add_persistible_attr type, description, is_multiple:
+        def ORM_add_persistible_attr type, description, is_multiple: #TODO poner en otro lado para no mandarlo con send y revisar si tenemos otros asi
             if type.is_a? ORM::PersistibleModule
                 type.send :ORM_add_deletion_observer, self
             end
@@ -247,12 +253,12 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def valid_find_by_method method_name
-            instance_method((method_name)).arity == 0
+            instance_method(method_name).arity == 0
         end
 
         def initialize_find_by_methods
-            create_method_find_by 'id'
-            instance_methods(false).select{|method| valid_find_by_method method}.each do |method| # TODO y los métodos heredados?
+            create_method_find_by 'id' #TODO sacar el false de instance methods + tests de los metodos heredados
+            instance_methods(false).select{|method| valid_find_by_method method}.each do |method|
                 create_method_find_by method
             end
         end
@@ -290,7 +296,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def create_method_find_by name
             selector = ("find_by_#{name}" ).to_sym
-            self.define_singleton_method (selector) { |param| all_instances.select { |elem| (elem.send (name.to_sym)) == param } }
+            self.define_singleton_method(selector) { |param| all_instances.select { |elem| (elem.send(name.to_sym)) == param } }
         end
 
         private  :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers, :valid_find_by_method, :create_method_find_by, :initialize_find_by_methods
@@ -322,7 +328,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         def ORM_wipe_references_to type, id # acá se recibe todoo id que haya sido borrado de la tabla de su clase, cuya clase forme parte de una composición con esta clase receptora
             (get_persistible_attr_by_type type).each do |attr|
-                if (all_instances.empty?)
+                if all_instances.empty?
                     return
                 end
                 if attr[:multiple] # si es composición multiple se borran las entries correspondientes en la tabla de la relación entre las dos clases
@@ -414,6 +420,9 @@ class TrueClass
     end
 end
 
+
+=begin
+
 module CosasTestingReloaded
     class Nota
         has_one Numeric, named: :valor
@@ -433,6 +442,7 @@ module CosasTestingReloaded
         end
     end
 end
+=end
 
 # para testear a manopla
 =begin
