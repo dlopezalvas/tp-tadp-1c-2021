@@ -213,7 +213,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
         def method_added method_name
-            if (method_name[-1] != '=') and ((instance_method method_name).arity == 0)
+            if (!method_name.to_s.end_with?("=") && instance_method((method_name.to_sym)).arity == 0)
                 create_method_find_by method_name
             end
         end
@@ -224,7 +224,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             if not @persistible_attrs
                 if self.class == Class
-                    create_find_by
+                    create_method_find_by 'id'
                     extend ORM::PersistibleClass
                     prepend ORM::PersistibleObject # para que los objetos tengan el comportamiento de persistencia; es prepend para poder agregarle comportamiento al constructor
                     @table = TADB::DB.table(name)
@@ -242,18 +242,10 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 end
             end
             attr_accessor attr_name # define getters+setters para los objetos
-            create_method_find_by attr_name
         end
 
         def included includer_module
             ORM_add_descendant includer_module
-        end
-
-        def create_find_by
-            create_method_find_by 'id'
-            instance_methods(false).reject{|method| method.to_s.end_with?("=") || instance_method((method.to_sym)).arity > 0}.each do |method|
-                create_method_find_by method.to_s
-            end
         end
 
         def ORM_add_descendant descendant
