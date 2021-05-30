@@ -596,6 +596,14 @@ describe "Persistencia de objetos" do
       expect{tiff.save!}.to raise_error 'The instance can not be smaller than the minimum required'
     end
 
+    it 'No se puede crear un atributo no Numeric con validaciones from or to' do
+      expect{Class.new().has_one String, named: :hola, from: 100, to: 200}.to raise_error "A String cant have to: or from: restrictions"
+    end
+
+    it 'No se puede crear un Numeric con limite superior mayor a limite inferior' do
+      expect{Class.new().has_one Numeric, named: :hola, from: 200, to: 150}.to raise_error  "to: limit cant be lower than from: limit"
+    end
+
     it 'Has many - No se puede guardar un obejeto si tiene algun valor mayor al maximo requerido' do
       tiff = Dog.new([5, 200])
       expect{tiff.save!}.to raise_error 'The instance can not be bigger than the maximum required'
@@ -687,6 +695,10 @@ describe "Persistencia de objetos" do
       room.save!
       room.refresh!
       expect(room.teacher).to eq 'Lisa'
+    end
+
+    it 'No se puede crear un atributo con valor default de distinto tipo' do
+      expect{Class.new().has_many String, named: :hola, default: 2}.to raise_error "Default value must a String"
     end
 
   end
