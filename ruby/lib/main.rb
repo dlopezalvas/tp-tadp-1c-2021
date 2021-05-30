@@ -230,7 +230,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
         end
 
-        def validate_validations type, description
+        def validate_restrictions type, description
             if (not type.ancestors.include? Numeric) && (description[:to] or description[:from])
                 raise ORM_Error.new("A #{type} cant have to: or from: restrictions")
                 else
@@ -240,7 +240,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def ORM_add_persistible_attr type, description, is_multiple: #TODO poner en otro lado para no mandarlo con send y revisar si tenemos otros asi
-            validate_validations type, description
+            validate_restrictions type, description
             if type.is_a? ORM::PersistibleModule
                 type.send :ORM_add_deletion_observer, self
             end
@@ -333,7 +333,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.define_singleton_method(selector) { |param| all_instances.select { |elem| (elem.send(name.to_sym)) == param } }
         end
 
-        private  :validate_validations, :reject_nil_validations, :getValidations, :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers, :valid_find_by_method, :create_method_find_by, :initialize_find_by_methods
+        private  :validate_restrictions, :reject_nil_validations, :getValidations, :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers, :valid_find_by_method, :create_method_find_by, :initialize_find_by_methods
     end
 
 
