@@ -130,7 +130,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def validate!
             reject_id(get_non_multiple_attr).each do |attr|
                 attr_value = send attr[:named]
-                #other_validations(attr, attr_value)
                 attr[:validations].each do |validation|
                     validation.validate attr_value
                 end
@@ -143,7 +142,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             get_multiple_attr.each do |attr|
                 attr_value = send attr[:named]
                 attr_value.each do |elem|
-                    #other_validations(attr, elem)
                     attr[:validations].each do |validation|
                         validation.validate elem
                     end
@@ -206,27 +204,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             if attr[:validate]
                 validate_block(value, &attr[:validate])
-            end
-        end
-
-
-        def validate_blank(value)
-            if value.nil? || value.empty? then raise ORM_Error.new("The instance can not be nil nor empty")
-            end
-        end
-
-        def validate_from(min, value)
-            if value < min then raise ORM_Error.new('The instance can not be smaller than the minimum required')
-            end
-        end
-
-        def validate_to(max, value)
-            if value > max then raise ORM_Error.new('The instance can not be bigger than the maximum required')
-            end
-        end
-
-        def validate_block(value, &block)
-            unless value.instance_eval(&block) then raise ORM_Error.new('The instance has invalid values')
             end
         end
 

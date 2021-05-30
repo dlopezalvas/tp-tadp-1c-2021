@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="d003d345-ef6e-43ab-be9d-6223fec667c2" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ruby/lib/main.rb" beforeDir="false" afterPath="$PROJECT_DIR$/ruby/lib/main.rb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -260,7 +259,7 @@
       <workItem from="1622151994251" duration="242000" />
       <workItem from="1622224834230" duration="10538000" />
       <workItem from="1622248147051" duration="3531000" />
-      <workItem from="1622337202958" duration="1430000" />
+      <workItem from="1622337202958" duration="1767000" />
     </task>
     <servers />
   </component>
