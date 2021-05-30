@@ -288,22 +288,29 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             end
             attr_name = description[:named]
             @persistible_attrs.delete_if { |attr| attr[:named] == attr_name }
-            validations = [
-                [Validation_no_blank, description[:no_blank]],
-                [Validation_from, description[:from]],
-                [Validation_to, description[:to]],
-                [Validation_by_block, description[:validate]]
-            ]
-            validations = validations.reject{|val| val[1] == nil}.map do |val|
-                val[0].new val[1]
-            end
-            @persistible_attrs << {named: attr_name, type: type, multiple: is_multiple, default: description[:default], validations: validations} # default: description[:default], blank: description[:no_blank], from: description[:from], to: description[:to], validate: description[:validate]} # @persistible_attrs sería como la metadata de la @table del módulo
+            @persistible_attrs << {named: attr_name, type: type, multiple: is_multiple, default: description[:default], validations: (getValidations description)} # @persistible_attrs sería como la metadata de la @table del módulo
             @descendants.each do |descendant|
                 unless descendant.instance_methods(false).include? attr_name #evita que superclase pise metodos de subclases
                     descendant.send :ORM_add_persistible_attr, type, description, is_multiple: is_multiple
                 end
             end
             attr_accessor attr_name # define getters+setters para los objetos
+        end
+
+        def getValidations description
+            validations = [
+              {class: Validation_no_blank, param: description[:no_blank]},
+              {class: Validation_from, param: description[:from]},
+              {class: Validation_to, param: description[:to]},
+              {class: Validation_by_block, param: description[:validate]}
+            ]
+            (reject_nil_validations  validations).map do |validation|
+                validation[:class].new validation[:param]
+            end
+        end
+
+        def reject_nil_validations validations
+            validations.reject{|validation| validation[:param] == nil}
         end
 
         def included includer_module
@@ -357,7 +364,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
             self.define_singleton_method(selector) { |param| all_instances.select { |elem| (elem.send(name.to_sym)) == param } }
         end
 
-        private  :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers, :valid_find_by_method, :create_method_find_by, :initialize_find_by_methods
+        private  :reject_nil_validations, :getValidations, :ORM_notify_deletion, :ORM_add_deletion_observer, :ORM_add_descendant, :ORM_get_all_deletion_observers, :valid_find_by_method, :create_method_find_by, :initialize_find_by_methods
     end
 
 
