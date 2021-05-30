@@ -35,11 +35,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     end
 
     class Validation_by_block
-        def initialize validation_proc #TODO replanteate tu existencia
+        def initialize validation_proc
             @block = validation_proc
         end
         def validate value
-            unless @block.call(value) then raise ORM_Error.new('The instance has invalid values')
+            unless value.instance_eval(&@block) then raise ORM_Error.new('The instance has invalid values')
             end
         end
     end
@@ -292,8 +292,8 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
                 [Validation_no_blank, description[:no_blank]],
                 [Validation_from, description[:from]],
                 [Validation_to, description[:to]],
+                [Validation_by_block, description[:validate]]
             ]
-            validations << [Validation_by_block, proc{|x| x.instance_eval(&description[:validate])}] if description[:validate] # TODO ver si se puede tratar como caso normal en vez de especial (como los demas)
             validations = validations.reject{|val| val[1] == nil}.map do |val|
                 val[0].new val[1]
             end
