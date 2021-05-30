@@ -35,8 +35,8 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
     end
 
     class Validation_by_block
-        def initialize validation_proc
-            @block = validation_proc
+        def initialize block
+            @block = block
         end
         def validate value
             unless value.instance_eval(&@block) then raise ORM_Error.new('The instance has invalid values')
@@ -189,23 +189,6 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         def setter attr
             (attr[:named].to_s + '=').to_sym
         end #esto es privado?
-
-        def other_validations (attr, value) #TODO cada validacion es una clase y las podemos tener en hash
-            if attr[:blank]
-                validate_blank(value)
-            end
-            if value.is_a? Numeric
-                if attr[:from]
-                    validate_from(attr[:from], value)
-                end
-                if attr[:to]
-                    validate_to(attr[:to], value)
-                end
-            end
-            if attr[:validate]
-                validate_block(value, &attr[:validate])
-            end
-        end
 
         def validate_values_by(condition)
             unless condition then raise ORM_Error.new('The instance has invalid values')
