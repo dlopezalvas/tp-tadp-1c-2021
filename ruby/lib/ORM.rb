@@ -1,81 +1,27 @@
 require 'tadb'
 
+require_relative 'Boolean'
+require_relative 'Restrictions'
+require_relative 'Validations'
+
 class Module
 
     def has_one type, description
-        Restrictions.validate_restrictions type, description
+        Restrictions.validateRestrictions type, description
         extend ORM::PersistibleModule
         ORM_add_persistible_attr type, description, is_multiple: false
     end
 
     def has_many type, description
-        Restrictions.validate_restrictions type, description
+        Restrictions.validateRestrictions type, description
         extend ORM::PersistibleModule
         ORM_add_persistible_attr type, description, is_multiple: true
     end
 
 end
 
-module Restrictions
-    def self.validate_restrictions type, description
-        if (not type.ancestors.include? Numeric) && (description[:to] or description[:from])
-            raise ORM::ORM_Error.new("A #{type} cant have to: or from: restrictions")
-        else
-            raise ORM::ORM_Error.new("to: limit cant be lower than from: limit") if description[:to] and description[:from] and description[:from] > description[:to]
-        end
-        raise ORM::ORM_Error.new("Default value must a #{type}") if (description[:default] and not description[:default].is_a? type)
-    end
-end
 
 module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la idea es no contaminar el namespace
-
-    class ORM_Error < StandardError
-        def initialize(msg="Error")
-            super(msg)
-        end
-    end
-
-    class Validation_no_blank
-        def initialize needs_validation
-            @needs_validation = needs_validation
-        end
-
-        def validate(value)
-            if @needs_validation and (value.nil? || value.empty?) then raise ORM_Error.new("The instance can not be nil nor empty")
-            end
-        end
-    end
-
-    class Validation_by_block
-        def initialize block
-            @block = block
-        end
-        def validate value
-            unless value.instance_eval(&@block) then raise ORM_Error.new('The instance has invalid values')
-            end
-        end
-    end
-
-    class Validation_to
-        def initialize max
-            @max = max
-        end
-        def validate value
-            if value > @max then raise ORM_Error.new('The instance can not be bigger than the maximum required')
-            end
-        end
-    end
-
-    class Validation_from
-        def initialize min
-            @min = min
-        end
-        def validate value
-            if value < @min then raise ORM_Error.new('The instance can not be smaller than the minimum required')
-            end
-        end
-    end
-
     module PersistibleObject # esto es sólo para objetos; lo estático está en PersistibleModule
         attr_reader :id
 
@@ -236,6 +182,7 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
 
     module PersistibleModule # define exclusivamente lo estático; es necesaria la distinción por la diferencia entre prepend y extend
+
         def method_added method_name
             if valid_find_by_method method_name
                 create_method_find_by method_name
@@ -269,16 +216,18 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
         end
 
         def getValidations description
-            validations = [
-              {class: Validation_no_blank, param: description[:no_blank]},
-              {class: Validation_from, param: description[:from]},
-              {class: Validation_to, param: description[:to]},
-              {class: Validation_by_block, param: description[:validate]}
-            ]
-            (reject_nil_validations  validations).map do |validation|
-                validation[:class].new validation[:param]
+
+            validations = {ValidationByBlock => description[:validate],
+                           ValidationNoBlank => description[:no_blank],
+                           ValidationFrom => description[:from],
+                           ValidationTo => description[:to]}.compact.to_a
+
+            validations.map do |validation|
+                validation[0].new validation[1]
             end
         end
+
+
 
         def reject_nil_validations validations
             validations.reject{|validation| validation[:param] == nil}
@@ -420,98 +369,11 @@ module ORM # a las cosas de acá se puede acceder a través de ORM::<algo>; la i
 
         private :ORM_add_persistible_attr, :get_persistible_attr_by_type, :instantiate, :ORM_insert, :ORM_get_entry, :ORM_delete_entry, :ORM_wipe_references_to, :ORM_attr_table, :ORM_delete_from_attr_tables
     end
-end
 
-class Boolean
-    def self.new(bool)
-        bool
-    end
-
-    def self.true
-        true
-    end
-
-    def self.false
-        false
-    end
-end
-
-class FalseClass
-    def is_a?(other)
-        other == Boolean || super
-    end
-
-    def self.===(other)
-        other == Boolean || super
-    end
-end
-
-class TrueClass
-    def is_a?(other)
-        other == Boolean || super
-    end
-
-    def self.===(other)
-        other == Boolean || super
-    end
-end
-
-
-=begin
-
-module CosasTestingReloaded
-    class Nota
-        has_one Numeric, named: :valor
-
-        def initialize (valor = nil)
-          @valor = valor
-        end
-    end
-
-    class Alumno
-        has_one String, named: :nombre
-        has_many Nota, named: :notas
-
-        def initialize (nombre = nil, notas = [])
-          @nombre = nombre
-          @notas = notas
+    class ORM_Error < StandardError
+        def initialize(msg = "Error")
+            super(msg)
         end
     end
 end
-=end
 
-# para testear a manopla
-=begin
-module CosasTesting
-    class DNI
-        has_one Numeric, named: :number
-    end
-
-    class Grade
-        has_one Numeric, named: :value
-    end
-
-    module Person
-        has_one String, named: :full_name
-    end
-
-    class Student
-        include Person
-        has_many Grade, named: :grades
-        has_one DNI, named: :dni
-    end
-
-    class Ayu < Student
-        def initialize
-            g = Grade.new
-            g.value = 5
-            @grades=[g]
-            super
-        end
-    end
-
-    module Person
-        has_one Numeric, named: :dni
-    end
-end
-=end
