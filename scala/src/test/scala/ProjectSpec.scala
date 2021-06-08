@@ -1,6 +1,7 @@
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.matchers.should.Matchers._
+import org.scalatest.freespec.{AnyFreeSpec}
 
-class ProjectSpec extends FreeSpec with Matchers {
+class ProjectSpec extends AnyFreeSpec {
 
   "Este proyecto" - {
 

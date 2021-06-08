@@ -4,9 +4,9 @@ version := "1"
 
 organization := "edu.ar.utn.tadp"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.13.0"
 
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "3.0.5" % "test",
-  "org.scalactic" %% "scalactic" % "3.0.5"
+  "org.scalatest" %% "scalatest" % "3.2.9" % "test",
+  "org.scalactic" %% "scalactic" % "3.2.9"
 )
