@@ -1,5 +1,5 @@
 import Color.{Color, Negro}
-import LadoMoneda.LadoMoneda
+import LadoMoneda.{Cara, Cruz, LadoMoneda}
 import Paridad._
 import Tipos.Dinero
 
@@ -31,24 +31,28 @@ case class SucesoRuleta(val valor: Int, color: Option[Color]) extends Suceso {
 
 }
 
-object Sucesos{
-    val Cero = SucesoRuleta(0, None)
-    val Uno = SucesoRuleta(1, Some(Color.Rojo))
-    val Dos = SucesoRuleta(2, Some(Color.Negro))
-    val Tres = SucesoRuleta(3, Some(Color.Rojo))
-    val Cuatro = SucesoRuleta(4, Some(Color.Negro))
-    val Cinco = SucesoRuleta(5, Some(Color.Rojo))
-    val Seis = SucesoRuleta(6, Some(Color.Negro))
-    val Siete = SucesoRuleta(7,Some(Color.Rojo))
-    val Ocho = SucesoRuleta(8, Some(Color.Negro))
-    val Nueve = SucesoRuleta(9, Some(Color.Rojo))
-    val Diez = SucesoRuleta(10, Some(Color.Negro))
-    val Once = SucesoRuleta(11, Some(Color.Negro))
-    val Doce = SucesoRuleta(12, Some(Color.Rojo))
-    val Trece = SucesoRuleta(13, Some(Color.Negro))
-    val Catorce = SucesoRuleta(14, Some(Color.Rojo))
-    val Quince = SucesoRuleta(15, Some(Color.Negro))
-    val Dieciseis = SucesoRuleta(16, Some(Color.Rojo))
-    //...
-}
 
+case object Sucesos {
+  val sucesosRuleta: List[SucesoRuleta] = {
+    (0 to 36).zip(List[Option[Color]](
+      None,
+      Some(Color.Rojo),   Some(Color.Negro),  Some(Color.Rojo),
+      Some(Color.Negro),  Some(Color.Rojo),   Some(Color.Negro),
+      Some(Color.Rojo),   Some(Color.Negro),  Some(Color.Rojo),
+      Some(Color.Negro),  Some(Color.Negro),  Some(Color.Rojo),
+      Some(Color.Negro),  Some(Color.Rojo),   Some(Color.Negro),
+      Some(Color.Rojo),   Some(Color.Negro),  Some(Color.Rojo),
+      Some(Color.Rojo),   Some(Color.Negro),  Some(Color.Rojo),
+      Some(Color.Negro),  Some(Color.Rojo),   Some(Color.Negro),
+      Some(Color.Rojo),   Some(Color.Negro),  Some(Color.Rojo),
+      Some(Color.Negro),  Some(Color.Negro),  Some(Color.Rojo),
+      Some(Color.Negro),  Some(Color.Rojo),   Some(Color.Negro),
+      Some(Color.Rojo),   Some(Color.Negro),  Some(Color.Rojo),
+    )).map(t => t match {
+      case (numero_, color_) =>
+        SucesoRuleta( numero_, color_)
+    }).toList
+  }
+
+  val sucesosCaraCruz: List[SucesoMoneda] = List(SucesoMoneda(Cara), SucesoMoneda(Cruz))
+}

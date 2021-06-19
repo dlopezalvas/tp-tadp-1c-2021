@@ -1,4 +1,3 @@
-import LadoMoneda._
 import Sucesos._
 import Tipos.Probabilidad
 
@@ -7,13 +6,14 @@ trait Juego {
 
   def distribucionProbabilidad(): List[(Suceso, Probabilidad)] = ???
 
+  def funcionFea(suceso: Suceso, resultadoEsperado: ResultadoEsperado): Int = //TODO arreglar estos nombres horribles
+    if(suceso.seCumple(resultadoEsperado)) resultadoEsperado.peso else 0
 
   def probabilidad(resultadoEsperado: ResultadoEsperado): Probabilidad ={
-    sucesosPosibles().count(suceso => suceso.seCumple(resultadoEsperado))/ sucesosPosibles().length
+    sucesosPosibles().map(suceso => funcionFea(suceso, resultadoEsperado)).sum / sucesosPosibles().length
   }
 }
 
-object Ruleta extends Juego { def sucesosPosibles: List[SucesoRuleta] = List(Cero, Uno, Dos, Tres, Cuatro, Cinco,
-  Seis, Siete, Ocho, Nueve, Diez, Once, Doce, Trece, Catorce, Quince, Dieciseis) }
+object Ruleta extends Juego { def sucesosPosibles: List[SucesoRuleta] = sucesosRuleta }
 
-object CaraOCruz extends Juego { def sucesosPosibles: List[SucesoMoneda] = List(SucesoMoneda(Cara), SucesoMoneda(Cruz))}
+object CaraOCruz extends Juego { def sucesosPosibles: List[SucesoMoneda] = sucesosCaraCruz}
