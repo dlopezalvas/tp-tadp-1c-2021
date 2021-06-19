@@ -28,7 +28,6 @@ trait Juego {
 object Ruleta extends Juego { def sucesosPosibles: List[SucesoRuleta] = sucesosRuleta
 
   override protected def esValido(resultadoEsperado: ResultadoEsperado): Boolean = resultadoEsperado match {
-    // case Numero(n) if (0 <= n) && (n <= 36) // TODO esto no creo que funcione como espero
     case Numero(_)
          | ColorEsperado(_)
          | ParidadEsperada(_)

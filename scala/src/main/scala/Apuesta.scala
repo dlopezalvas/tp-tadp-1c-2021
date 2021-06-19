@@ -6,31 +6,6 @@ case class Apuesta(val dinero:Dinero, resultadoEsperado: ResultadoEsperado, val 
     else 0
 }
 
-/*class ApuestaCompuesta {
-  var _apuestas : Array[Apuesta] = Array[Apuesta]()
-
-  def resultados : Resultados = {
-    var resultados_ : Resultados = new Resultados
-    for (
-      suceso <- sucesos;
-      apuesta <- _apuestas if apuesta.jugada.saleBienSi(suceso)
-    ) {
-      resultados_.registrarChance(apuesta)
-    }
-    resultados_
-  }
-
-  private def sucesos : List[Suceso] = _apuestas match {
-    case Array(apuesta, _*) => apuesta.juego.sucesos
-    case _ => List[Suceso]()
-  }
-
-  class Resultados {
-  private var _resultados : Map[Double, Double] = Map()
-
-
-}*/
-
 case class ApuestaCompuesta(val apuestas: List[Apuesta] = List[Apuesta]()){
   def apostar (apuesta :Apuesta) = ApuestaCompuesta(apuestas.appended(apuesta))
 

@@ -1,7 +1,7 @@
-import Color.{Color, Negro}
+import Color.{Color}
 import LadoMoneda.{Cara, Cruz, LadoMoneda}
 import Paridad._
-import Tipos.Dinero
+
 
 trait Suceso{
   def seCumple(resultadoEsperado: ResultadoEsperado): Boolean
