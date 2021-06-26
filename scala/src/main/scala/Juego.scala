@@ -1,45 +1,93 @@
-import Sucesos._
-import Tipos.{Dinero, Probabilidad}
+import Color.Color
+import Tipos.{Apuesta, Dinero, Probabilidad}
 
 trait Juego {
-  def sucesosPosibles(): List[Suceso]
-
-  def distribucionProbabilidad(): List[(Suceso, Probabilidad)] = ??? //TODO preguntar que onda
-
-  def metodoFeo(suceso: Suceso, resultadoEsperado: ResultadoEsperado): Int = //TODO arreglar estos nombres horribles
-    if(suceso.seCumple(resultadoEsperado)) resultadoEsperado.peso else 0
-
-  def probabilidad(resultadoEsperado: ResultadoEsperado): Probabilidad ={ //TODO arreglar tema pesos de todos los resultados
-    sucesosPosibles().map(suceso => metodoFeo(suceso, resultadoEsperado)).sum / sucesosPosibles().length
+  // TODO saltea chequeo de tiposde getDDPJugadas
+  def getDDPApuesta(apuesta : Apuesta) : DDPApuesta = {
+    var ddpJugadas = _getDDPJugadas(get_jugadas(apuesta))
+    DDPApuesta.sumarRepetidos(ddpJugadas.distribucion.map(_ match {
+      case (jugadas, probabilidad) => (jugadas.map(find_jugada(_, apuesta)).sum, probabilidad)
+    }))
   }
 
-  def probabilidadSuceso(suceso: Suceso): Probabilidad ={ //TODO ver peso
-    1.0/sucesosPosibles().length
+  private def find_jugada(jugada: Jugada, apuesta: Apuesta): Dinero = { // TODO debe irse
+    apuesta.filter(_ match {
+      case (jugada_, _) => jugada_ == jugada
+    }).map(_ match {
+      case (jugada_, dinero_) => dinero_ * jugada_.factorGanancia
+    }).sum
   }
 
-  def jugarA(resultadoEsperado: ResultadoEsperado, monto : Dinero) : Apuesta = {
-    if (!esValido(resultadoEsperado)) throw new RuntimeException //TODO hacer error jugada Invalida
-    Apuesta(monto, resultadoEsperado, this)
+  private def get_jugadas(apuesta: Apuesta) : List[Jugada] = { // TODO también debe irse
+    apuesta.map(_ match {
+      case (jugada_, _) => jugada_
+    })
   }
 
-  protected def esValido(resultadoEsperado: ResultadoEsperado) : Boolean
+  protected def _getDDPJugadas(jugadas : List[Jugada]) : DDPJugadas = {
+    var distribucion = new DDPJugadas(List());
+    for (
+      suceso <- todosLosSucesos();
+      combinacionDeJugadas <- conjuntoPotencia(jugadas)
+    ) {
+      if (suceso.cumpleConVarias(jugadas, combinacionDeJugadas)) {
+        distribucion = distribucion.sumarProbabilidad(combinacionDeJugadas, probabilidadDeSuceso(suceso));
+      }
+    }
+    distribucion;
+  }
+
+  def todosLosSucesos() : List[Suceso]
+
+  def probabilidadDeSuceso(suceso : Suceso) : Probabilidad = suceso.peso / pesoDeTodosLosSucesos;
+
+  protected def pesoDeTodosLosSucesos(): Double = todosLosSucesos.map(_.peso).sum
+
+  protected def conjuntoPotencia[A](s: List[A]): List[List[A]] = {
+    @annotation.tailrec
+    def pwr(s: List[A], acc: List[List[A]]): List[List[A]] = s match {
+      case Nil => acc
+      case a :: as => pwr(as, acc ::: (acc map (a :: _)))
+    }
+    pwr(s, Nil :: Nil)
+  }
 }
 
-object Ruleta extends Juego { def sucesosPosibles: List[SucesoRuleta] = sucesosRuleta
+object Moneda extends Juego {
+  def getDDPJugadas(jugadas : List[JugadaMoneda]) : DDPJugadas = {
+    _getDDPJugadas(jugadas)
+  }
 
-  override protected def esValido(resultadoEsperado: ResultadoEsperado): Boolean = resultadoEsperado match {
-    case Numero(_)
-         | ColorEsperado(_)
-         | ParidadEsperada(_)
-         | Docena(_) => true
-    case _ => false
+  def todosLosSucesos() : List[Suceso] = List(
+    SucesoMoneda(LadoMoneda.Cara),
+    SucesoMoneda(LadoMoneda.Cruz)
+  )
+}
+
+object Ruleta extends Juego {
+  def getDDPJugadas(jugadas : List[JugadaRuleta]) : DDPJugadas = {
+    _getDDPJugadas(jugadas)
+  }
+
+  def todosLosSucesos() : List[Suceso] = {
+    (0 to 36).zip(List[Option[Color]](
+      None,
+      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
+      Some(Color.Negro), Some(Color.Rojo),  Some(Color.Negro),
+      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
+      Some(Color.Negro), Some(Color.Negro), Some(Color.Rojo),
+      Some(Color.Negro), Some(Color.Rojo),  Some(Color.Negro),
+      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
+      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
+      Some(Color.Negro), Some(Color.Rojo),  Some(Color.Negro),
+      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
+      Some(Color.Negro), Some(Color.Negro), Some(Color.Rojo),
+      Some(Color.Negro), Some(Color.Rojo),  Some(Color.Negro),
+      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
+    )).map(_ match {
+      case (numero, color) =>
+        SucesoRuleta(numero, color)
+    }).toList
   }
 }
 
-object CaraOCruz extends Juego { def sucesosPosibles: List[SucesoMoneda] = sucesosCaraCruz
-
-  override protected def esValido(resultadoEsperado: ResultadoEsperado): Boolean = resultadoEsperado match {
-    case LadoEsperado(_) => true
-    case _ => false
-  }
-}
