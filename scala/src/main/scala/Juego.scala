@@ -3,9 +3,9 @@ import Tipos.{Apuesta, Dinero, Probabilidad}
 
 trait Juego {
   // TODO saltea chequeo de tiposde getDDPJugadas
-  def getDDPApuesta(apuesta : Apuesta) : DDPApuesta = {
+  def getDDPApuesta(apuesta : Apuesta) : DistribucionApuesta = {
     var ddpJugadas = _getDDPJugadas(get_jugadas(apuesta))
-    DDPApuesta.sumarRepetidos(ddpJugadas.distribucion.map(_ match {
+    DistribucionApuesta.sumarRepetidos(ddpJugadas.distribucion.map(_ match {
       case (jugadas, probabilidad) => (jugadas.map(find_jugada(_, apuesta)).sum, probabilidad)
     }))
   }
@@ -24,8 +24,8 @@ trait Juego {
     })
   }
 
-  protected def _getDDPJugadas(jugadas : List[Jugada]) : DDPJugadas = {
-    var distribucion = new DDPJugadas(List());
+  protected def _getDDPJugadas(jugadas : List[Jugada]) : DistribucionJugada = {
+    var distribucion = new DistribucionJugada(List());
     for (
       suceso <- todosLosSucesos();
       combinacionDeJugadas <- conjuntoPotencia(jugadas)
@@ -54,7 +54,7 @@ trait Juego {
 }
 
 object Moneda extends Juego {
-  def getDDPJugadas(jugadas : List[JugadaMoneda]) : DDPJugadas = {
+  def getDDPJugadas(jugadas : List[JugadaMoneda]) : DistribucionJugada = {
     _getDDPJugadas(jugadas)
   }
 
@@ -65,7 +65,7 @@ object Moneda extends Juego {
 }
 
 object Ruleta extends Juego {
-  def getDDPJugadas(jugadas : List[JugadaRuleta]) : DDPJugadas = {
+  def getDDPJugadas(jugadas : List[JugadaRuleta]) : DistribucionJugada = {
     _getDDPJugadas(jugadas)
   }
 
