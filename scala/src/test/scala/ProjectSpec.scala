@@ -16,7 +16,7 @@ class ProjectSpec extends AnyFreeSpec {
       "Probabilidad que salga Cara debe ser 50%" in {
         val jugarACara:JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
 
-        Moneda.getDDPJugadas(List(jugarACara)) shouldBe DistribucionJugada(List(
+        Moneda(1, 1).simularJugadas(List(jugarACara)) shouldBe DistribucionParaJugadas(List(
           (List(JugadaMoneda(LadoMoneda.Cara)),0.5),
           (List(),0.5)
         ))
@@ -24,8 +24,8 @@ class ProjectSpec extends AnyFreeSpec {
 
       "Si juego $10 a cara tengo 50% de probabilidad de ganar $20" in {
         val jugarACara:JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
-        val apuesta:Apuesta = List((jugarACara,10.0))
-        Moneda.getDDPApuesta(apuesta) shouldBe DistribucionApuesta(List(
+        val apuesta : (JugadaMoneda, Dinero) = (jugarACara, 10.0)
+        Moneda(1, 1).simularApuestas(List(apuesta)) shouldBe DistribucionParaApuestas(List(
           (20.0,0.5),
           (0.0,0.5)
         ))
@@ -34,8 +34,8 @@ class ProjectSpec extends AnyFreeSpec {
       "Si juego $10 a Rojo, $5 a Par en la ruleta" in {
         val jugarARojo:JugadaRuleta = ColorJugado(Color.Rojo)
         val jugarAPar:JugadaRuleta = ParidadJugada(Paridad.Par)
-        val apuesta:Apuesta = List((jugarARojo,10.0),(jugarAPar,5.0))
-        Ruleta.getDDPApuesta(apuesta) shouldBe DistribucionApuesta(List(
+        val apuestas : List[(JugadaRuleta, Dinero)] = List((jugarARojo, 10.0), (jugarAPar, 5.0))
+        Ruleta.simularApuestas(apuestas) shouldBe DistribucionParaApuestas(List(
           ( 0.0, 9.0/37.0),
           (20.0, 10.0/37.0),
           (10.0, 10.0/37.0),
@@ -46,8 +46,8 @@ class ProjectSpec extends AnyFreeSpec {
       "Si juego $12 a Rojo, $12 a Par en la ruleta" in {
         val jugarARojo:JugadaRuleta = ColorJugado(Color.Rojo)
         val jugarAPar:JugadaRuleta = ParidadJugada(Paridad.Par)
-        val apuesta:Apuesta = List((jugarARojo,12.0),(jugarAPar,12.0))
-        Ruleta.getDDPApuesta(apuesta) shouldBe DistribucionApuesta(List(
+        val apuestas : List[(JugadaRuleta, Dinero)] = List((jugarARojo,12.0),(jugarAPar,12.0))
+        Ruleta.simularApuestas(apuestas) shouldBe DistribucionParaApuestas(List(
           ( 0.0, 9.0/37.0),
           (24.0, 20.0/37.0),
           (48.0, 8.0/37.0)

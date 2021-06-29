@@ -1,7 +1,8 @@
 object Tipos {
-  type Apuesta = List[(Jugada, Dinero)]
+  type Apuesta = (Jugada, Dinero)
   type Dinero = Double
   type Probabilidad = Double
+  type Peso = Double
 }
 
 object Color extends Enumeration { // TODO va en otro archivo

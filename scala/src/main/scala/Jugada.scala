@@ -1,9 +1,17 @@
 import Color.Color
 import LadoMoneda.LadoMoneda
 import Paridad.Paridad
+import Tipos.{Apuesta, Dinero}
 
-abstract class Jugada(val peso: Int = 1) {
+abstract class Jugada() {
   def factorGanancia: Int
+
+  def dineroSegun(apuestas: List[Apuesta]): Dinero = {
+    (apuestas
+      filter { case (jugada, _) => jugada == this }
+      map    { case (_, dinero) => dinero * factorGanancia }
+    ).sum
+  }
 }
 
 abstract class JugadaRuleta extends Jugada {} // diferencia con trait?

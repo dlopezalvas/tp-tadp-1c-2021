@@ -1,92 +1,83 @@
 import Color.Color
 import Tipos.{Apuesta, Dinero, Probabilidad}
+import Utilidades.conjuntoPotencia
 
 trait Juego {
-  // TODO saltea chequeo de tiposde getDDPJugadas
-  def getDDPApuesta(apuesta : Apuesta) : DistribucionApuesta = {
-    var ddpJugadas = _getDDPJugadas(get_jugadas(apuesta))
-    DistribucionApuesta.sumarRepetidos(ddpJugadas.distribucion.map(_ match {
-      case (jugadas, probabilidad) => (jugadas.map(find_jugada(_, apuesta)).sum, probabilidad)
-    }))
-  }
 
-  private def find_jugada(jugada: Jugada, apuesta: Apuesta): Dinero = { // TODO debe irse
-    apuesta.filter(_ match {
-      case (jugada_, _) => jugada_ == jugada
-    }).map(_ match {
-      case (jugada_, dinero_) => dinero_ * jugada_.factorGanancia
-    }).sum
-  }
+  // simularApuesta: obtiene la distribución de probabilidad de las posibles ganancias dada una apuesta
+  def _simularApuestas(apuestas : List[Apuesta]) : DistribucionParaApuestas =
+    DistribucionParaApuestas.desdeDistribucionParaJugadas(
+      _simularJugadas(apuestas map { case (jugada, _) => jugada }),
+      apuestas
+    )
 
-  private def get_jugadas(apuesta: Apuesta) : List[Jugada] = { // TODO también debe irse
-    apuesta.map(_ match {
-      case (jugada_, _) => jugada_
-    })
-  }
-
-  protected def _getDDPJugadas(jugadas : List[Jugada]) : DistribucionJugada = {
-    var distribucion = new DistribucionJugada(List());
+  // _simularJugadas:
+  // obtiene la distribución de probabilidad de los posibles resultados de un conjunto de jugadas simultáneas
+  // para eso:
+  //    itera por el producto cartesiano entre los sucesos del juego y todos los posibles subconjuntos de jugadas
+  //    registrando la probabilidad correspondiente a cada combinacion de jugadas
+  //    que sea cumplida (estrictamente) por un suceso
+  protected def _simularJugadas(jugadas : List[Jugada]) : DistribucionParaJugadas = {
+    var distribucion = new DistribucionParaJugadas(List());
     for (
       suceso <- todosLosSucesos();
-      combinacionDeJugadas <- conjuntoPotencia(jugadas)
+      posibleCombinacionDeJugadas <- conjuntoPotencia(jugadas)
     ) {
-      if (suceso.cumpleConVarias(jugadas, combinacionDeJugadas)) {
-        distribucion = distribucion.sumarProbabilidad(combinacionDeJugadas, probabilidadDeSuceso(suceso));
-      }
+      if (suceso.cumpleEstrictamenteConVarias(jugadas, posibleCombinacionDeJugadas))
+        distribucion = distribucion.incrementarProbabilidadDe(
+          posibleCombinacionDeJugadas,
+          probabilidadDeSuceso(suceso)
+        );
     }
     distribucion;
   }
 
+  def probabilidadDeSuceso(suceso : Suceso) : Probabilidad = suceso.peso / todosLosSucesos.map(_.peso).sum;
+
+  // métodos a ser implementados por juegos concretos:
   def todosLosSucesos() : List[Suceso]
-
-  def probabilidadDeSuceso(suceso : Suceso) : Probabilidad = suceso.peso / pesoDeTodosLosSucesos;
-
-  protected def pesoDeTodosLosSucesos(): Double = todosLosSucesos.map(_.peso).sum
-
-  protected def conjuntoPotencia[A](s: List[A]): List[List[A]] = {
-    @annotation.tailrec
-    def pwr(s: List[A], acc: List[List[A]]): List[List[A]] = s match {
-      case Nil => acc
-      case a :: as => pwr(as, acc ::: (acc map (a :: _)))
-    }
-    pwr(s, Nil :: Nil)
-  }
 }
 
-object Moneda extends Juego {
-  def getDDPJugadas(jugadas : List[JugadaMoneda]) : DistribucionJugada = {
-    _getDDPJugadas(jugadas)
-  }
+
+case class Moneda(val pesoCara: Double, val pesoCruz: Double) extends Juego {
+
+  // sirven de fachada para asegurar que sólo se simulen jugadas que correspondan al juego Moneda
+  def simularJugadas(jugadas : List[JugadaMoneda]) : DistribucionParaJugadas = _simularJugadas(jugadas)
+  def simularApuestas(apuestas : List[(JugadaMoneda, Dinero)]) : DistribucionParaApuestas =
+    _simularApuestas(apuestas)
 
   def todosLosSucesos() : List[Suceso] = List(
-    SucesoMoneda(LadoMoneda.Cara),
-    SucesoMoneda(LadoMoneda.Cruz)
+    SucesoMoneda(LadoMoneda.Cara, pesoCara),
+    SucesoMoneda(LadoMoneda.Cruz, pesoCruz)
   )
 }
 
+
 object Ruleta extends Juego {
-  def getDDPJugadas(jugadas : List[JugadaRuleta]) : DistribucionJugada = {
-    _getDDPJugadas(jugadas)
-  }
+
+  // sirven de fachada para asegurar que sólo se simulen jugadas que correspondan al juego Ruleta
+  def simularJugadas(jugadas : List[JugadaRuleta]) : DistribucionParaJugadas = _simularJugadas(jugadas)
+  def simularApuestas(apuestas : List[(JugadaRuleta, Dinero)]) : DistribucionParaApuestas = _simularApuestas(apuestas)
 
   def todosLosSucesos() : List[Suceso] = {
-    (0 to 36).zip(List[Option[Color]](
+    val rojo = Some(Color.Rojo)
+    val negro = Some(Color.Negro)
+    ((0 to 36).zip(List[Option[Color]](
       None,
-      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
-      Some(Color.Negro), Some(Color.Rojo),  Some(Color.Negro),
-      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
-      Some(Color.Negro), Some(Color.Negro), Some(Color.Rojo),
-      Some(Color.Negro), Some(Color.Rojo),  Some(Color.Negro),
-      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
-      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
-      Some(Color.Negro), Some(Color.Rojo),  Some(Color.Negro),
-      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
-      Some(Color.Negro), Some(Color.Negro), Some(Color.Rojo),
-      Some(Color.Negro), Some(Color.Rojo),  Some(Color.Negro),
-      Some(Color.Rojo),  Some(Color.Negro), Some(Color.Rojo),
-    )).map(_ match {
-      case (numero, color) =>
-        SucesoRuleta(numero, color)
+      rojo,  negro, rojo,
+      negro, rojo,  negro,
+      rojo,  negro, rojo,
+      negro, negro, rojo,
+      negro, rojo,  negro,
+      rojo,  negro, rojo,
+      rojo,  negro, rojo,
+      negro, rojo,  negro,
+      rojo,  negro, rojo,
+      negro, negro, rojo,
+      negro, rojo,  negro,
+      rojo,  negro, rojo,
+    )).map { case (numero, color) =>
+      SucesoRuleta(numero, color)
     }).toList
   }
 }
