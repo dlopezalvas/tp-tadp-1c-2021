@@ -1,10 +1,10 @@
 import Color.Color
-import Tipos.{Apuesta, Dinero, Probabilidad}
+import Tipos.{Apuesta, Dinero, Peso, Probabilidad}
 import Utilidades.conjuntoPotencia
 
 trait Juego {
 
-  // simularApuesta: obtiene la distribución de probabilidad de las posibles ganancias dada una apuesta
+  // _simularApuestas: obtiene la distribución de probabilidad de las posibles ganancias dada una apuesta compuesta
   def _simularApuestas(apuestas : List[Apuesta]) : DistribucionParaApuestas =
     DistribucionParaApuestas.desdeDistribucionParaJugadas(
       _simularJugadas(apuestas map { case (jugada, _) => jugada }),
@@ -17,13 +17,13 @@ trait Juego {
   //    itera por el producto cartesiano entre los sucesos del juego y todos los posibles subconjuntos de jugadas
   //    registrando la probabilidad correspondiente a cada combinacion de jugadas
   //    que sea cumplida (estrictamente) por un suceso
-  protected def _simularJugadas(jugadas : List[Jugada]) : DistribucionParaJugadas = {
+  protected def _simularJugadas(jugadasASimular : List[Jugada]) : DistribucionParaJugadas = {
     var distribucion = new DistribucionParaJugadas(List());
     for (
-      suceso <- todosLosSucesos();
-      posibleCombinacionDeJugadas <- conjuntoPotencia(jugadas)
+      suceso <- todosLosSucesosDelJuego();
+      posibleCombinacionDeJugadas <- conjuntoPotencia(jugadasASimular)
     ) {
-      if (suceso.cumpleEstrictamenteConVarias(jugadas, posibleCombinacionDeJugadas))
+      if (suceso.cumpleEstrictamenteCon(posibleCombinacionDeJugadas, jugadasASimular))
         distribucion = distribucion.incrementarProbabilidadDe(
           posibleCombinacionDeJugadas,
           probabilidadDeSuceso(suceso)
@@ -32,21 +32,20 @@ trait Juego {
     distribucion;
   }
 
-  def probabilidadDeSuceso(suceso : Suceso) : Probabilidad = suceso.peso / todosLosSucesos.map(_.peso).sum;
+  def probabilidadDeSuceso(suceso : Suceso) : Probabilidad = suceso.peso / todosLosSucesosDelJuego.map(_.peso).sum;
 
   // métodos a ser implementados por juegos concretos:
-  def todosLosSucesos() : List[Suceso]
+  def todosLosSucesosDelJuego() : List[Suceso]
 }
 
 
-case class Moneda(val pesoCara: Double, val pesoCruz: Double) extends Juego {
+case class Moneda(val pesoCara: Peso, val pesoCruz: Peso) extends Juego {
 
   // sirven de fachada para asegurar que sólo se simulen jugadas que correspondan al juego Moneda
   def simularJugadas(jugadas : List[JugadaMoneda]) : DistribucionParaJugadas = _simularJugadas(jugadas)
-  def simularApuestas(apuestas : List[(JugadaMoneda, Dinero)]) : DistribucionParaApuestas =
-    _simularApuestas(apuestas)
+  def simularApuestas(apuestas : List[(JugadaMoneda, Dinero)]) : DistribucionParaApuestas = _simularApuestas(apuestas)
 
-  def todosLosSucesos() : List[Suceso] = List(
+  def todosLosSucesosDelJuego() : List[Suceso] = List(
     SucesoMoneda(LadoMoneda.Cara, pesoCara),
     SucesoMoneda(LadoMoneda.Cruz, pesoCruz)
   )
@@ -59,10 +58,10 @@ object Ruleta extends Juego {
   def simularJugadas(jugadas : List[JugadaRuleta]) : DistribucionParaJugadas = _simularJugadas(jugadas)
   def simularApuestas(apuestas : List[(JugadaRuleta, Dinero)]) : DistribucionParaApuestas = _simularApuestas(apuestas)
 
-  def todosLosSucesos() : List[Suceso] = {
+  def todosLosSucesosDelJuego() : List[Suceso] = {
     val rojo = Some(Color.Rojo)
     val negro = Some(Color.Negro)
-    ((0 to 36).zip(List[Option[Color]](
+    ((0 to 36) zip { List[Option[Color]](
       None,
       rojo,  negro, rojo,
       negro, rojo,  negro,
@@ -76,7 +75,7 @@ object Ruleta extends Juego {
       negro, negro, rojo,
       negro, rojo,  negro,
       rojo,  negro, rojo,
-    )).map { case (numero, color) =>
+    )} map { case (numero, color) =>
       SucesoRuleta(numero, color)
     }).toList
   }
