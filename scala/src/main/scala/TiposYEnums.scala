@@ -3,6 +3,9 @@ object Tipos {
   type Dinero = Double
   type Probabilidad = Double
   type Peso = Double
+  type PlanDeJuego = List[Apuesta]
+  type DistribucionPlanDeJuego = (PlanDeJuego, List[(Dinero, Probabilidad)])
+  type CriterioJugador = List[DistribucionPlanDeJuego] => PlanDeJuego
 }
 
 object Color extends Enumeration { // TODO va en otro archivo
