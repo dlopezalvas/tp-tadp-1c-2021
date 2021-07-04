@@ -26,7 +26,19 @@ case class DistribucionParaJugadas(distribucion: List[(List[Jugada], Probabilida
 
 
 // DistribucionParaApuestas: un wrapper para la distribución cruda
-case class DistribucionParaApuestas(distribucion: List[(Dinero, Probabilidad)]) {}
+case class DistribucionParaApuestas(distribucion: List[(Dinero, Probabilidad)]) {
+  /*def combinar(apuesta: Apuesta): DistribucionParaApuestas ={
+    var nuevaDistribucion :List[(Dinero,Probabilidad)] = List.empty
+    distribucion.foreach{
+      case (dineroOriginal, probabilidad) if(dinero >= apuesta.montoTotalApostado) =>
+        apuesta.simular().forEach{ case (dineroGanado, probabilidadDineroGanado)
+          nuevaDistribucion.add((dineroOriginal - apuesta.montoTotalApostado + dineroGanado), (probabilidad * probabilidadDineroGanado))
+        }
+      case _ => this
+    }
+    //Cosa magica que elimina repetidos y junta las probabilidades o ver en el add si ya existe.
+  }*/
+}
 case object DistribucionParaApuestas {
   def unificarRepetidos(distribucion: List[(Dinero, Probabilidad)]): List[(Dinero, Probabilidad)] = {
     // primero necesita obtener los montos (dinero) como claves únicas (descartando los repetidos con toSet)
@@ -55,4 +67,5 @@ case object DistribucionParaApuestas {
         }
     ))
   }
+
 }
