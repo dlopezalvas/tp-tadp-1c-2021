@@ -6,11 +6,13 @@ case class Jugador(val montoInicial: Dinero, val criterio: Criterio){
   }
 }
 
-object racional extends List[(PlanDeJuego, List[(Dinero, Probabilidad)]) => PlanDeJuego {
+object criterioRacional extends List[(PlanDeJuego, List[(Dinero, Probabilidad)]) => PlanDeJuego {
   def apply(distribuciones: List[(PlanDeJuego, List[(Dinero, Probabilidad)]) : PlanDeJuego {
-    distribuciones.maxBy((plan, distribucion) -> distribucion.sumBy((dinero, probabilidad) -> dinero * probabilidad))
+    distribuciones.maxBy{ _._1.sumBy((dinero, probabilidad) -> dinero * probabilidad)}
   }
 }
+
+/*  distribuciones.maxBy{(plan, distribucion) -> distribucion.sumBy((dinero, probabilidad) -> dinero * probabilidad)}*/
 
 case class PlanDeJuego(val nombre: String, val apuestas: List[Apuesta]){
 
