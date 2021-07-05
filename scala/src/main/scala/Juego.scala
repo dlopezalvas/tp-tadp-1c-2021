@@ -5,7 +5,7 @@ import Utilidades.conjuntoPotencia
 trait Juego {
 
   // _simularApuestas: obtiene la distribución de probabilidad de las posibles ganancias dada una apuesta compuesta
-  def _simularApuesta(apuesta : Apuesta) : DistribucionParaApuestas =
+  protected def _simularApuesta(apuesta : Apuesta) : DistribucionParaApuestas =
     DistribucionParaApuestas.desdeDistribucionParaJugadas(
       _simularJugadas(apuesta.apuesta map { case (jugada, _) => jugada }),
       apuesta.apuesta
@@ -17,7 +17,7 @@ trait Juego {
   //    itera por el producto cartesiano entre los sucesos del juego y todos los posibles subconjuntos de jugadas
   //    registrando la probabilidad correspondiente a cada combinacion de jugadas
   //    que sea cumplida (estrictamente) por un suceso
-  def _simularJugadas(jugadasASimular : List[Jugada]) : DistribucionParaJugadas = {
+  protected def _simularJugadas(jugadasASimular : List[Jugada]) : DistribucionParaJugadas = {
     var distribucion = new DistribucionParaJugadas(List());
     for (
       suceso <- todosLosPosiblesSucesos();
