@@ -24,10 +24,10 @@ case class DistribucionParaApuestas(distribucion: List[(Dinero, Probabilidad)]) 
   def combinar(apuesta: Apuesta): DistribucionParaApuestas = {
       // DRA es this, apuesta es apuesta xd
       DistribucionParaApuestas(DistribucionParaApuestas.unificarRepetidos(
-        distribucion.flatMap { // TODO: no resuelve
+        distribucion flatMap {
           case (dineroAnterior, probaAnterior) if dineroAnterior >= apuesta.dinero =>
             apuesta.simular().distribucion map { case (dineroGanado, probaDeGanarDinero) =>
-              (dineroAnterior + dineroGanado, probaAnterior * probaDeGanarDinero)
+              (dineroAnterior + dineroGanado - apuesta.dinero, probaAnterior * probaDeGanarDinero)
             }
           case x => List(x)
         }
