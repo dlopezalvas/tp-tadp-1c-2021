@@ -1,7 +1,7 @@
-import Tipos.{Apuesta, Dinero, Probabilidad}
+import Tipos.{Dinero, Probabilidad}
 
-case class PlanDeJuego(val nombre: String, val apuestas: List[Apuesta]){ //jugada sucesiva
-  def aplicar(montoInicial: Dinero): List[(Dinero, Probabilidad)] = ???/*{
-    apuestas.foldLeft(DistribucionParaApuestas(/*inserte semilla que tom sabe cual es*/))((apuesta, distribucion) => distribucion.combinar(apuesta))
-  }*/
+case class PlanDeJuego(nombre: String, apuestas: List[Apuesta]){ //jugada sucesiva
+  def aplicar(montoInicial: Dinero): List[(Dinero, Probabilidad)] =
+    (apuestas.foldLeft(DistribucionParaApuestas(List((montoInicial, 1))))
+      { (distribucion, apuesta) => distribucion.combinar(apuesta) }).distribucion
 }

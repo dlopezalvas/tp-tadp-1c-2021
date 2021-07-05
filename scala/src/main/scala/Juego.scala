@@ -1,14 +1,14 @@
 import Color.{Color, Rojo, Negro}
-import Tipos.{Apuesta, Dinero, Peso, Probabilidad}
+import Tipos.{Dinero, Peso, Probabilidad}
 import Utilidades.conjuntoPotencia
 
 trait Juego {
 
   // _simularApuestas: obtiene la distribución de probabilidad de las posibles ganancias dada una apuesta compuesta
-  protected def _simularApuestas(apuestas : List[Apuesta]) : DistribucionParaApuestas =
+  def _simularApuesta(apuesta : Apuesta) : DistribucionParaApuestas =
     DistribucionParaApuestas.desdeDistribucionParaJugadas(
-      _simularJugadas(apuestas map { case (jugada, _) => jugada }),
-      apuestas
+      _simularJugadas(apuesta.apuesta map { case (jugada, _) => jugada }),
+      apuesta.apuesta
     )
 
   // _simularJugadas:
@@ -17,7 +17,7 @@ trait Juego {
   //    itera por el producto cartesiano entre los sucesos del juego y todos los posibles subconjuntos de jugadas
   //    registrando la probabilidad correspondiente a cada combinacion de jugadas
   //    que sea cumplida (estrictamente) por un suceso
-  protected def _simularJugadas(jugadasASimular : List[Jugada]) : DistribucionParaJugadas = {
+  def _simularJugadas(jugadasASimular : List[Jugada]) : DistribucionParaJugadas = {
     var distribucion = new DistribucionParaJugadas(List());
     for (
       suceso <- todosLosPosiblesSucesos();
@@ -39,11 +39,11 @@ trait Juego {
 }
 
 
-case class Moneda(val pesoCara: Peso, val pesoCruz: Peso) extends Juego {
+case class Moneda(pesoCara : Peso = 1, pesoCruz : Peso = 1) extends Juego {
 
   // sirven de fachada para asegurar que sólo se simulen jugadas que correspondan al juego Moneda
   def simularJugadas(jugadas : List[JugadaMoneda]) : DistribucionParaJugadas = _simularJugadas(jugadas)
-  def simularApuestas(apuestas : List[(JugadaMoneda, Dinero)]) : DistribucionParaApuestas = _simularApuestas(apuestas)
+  def simularApuesta(apuesta : Apuesta): DistribucionParaApuestas = _simularApuesta(apuesta)
 
   def todosLosPosiblesSucesos() : List[Suceso] = List(
     SucesoMoneda(LadoMoneda.Cara, pesoCara),
@@ -56,7 +56,7 @@ object Ruleta extends Juego {
 
   // sirven de fachada para asegurar que sólo se simulen jugadas que correspondan al juego Ruleta
   def simularJugadas(jugadas : List[JugadaRuleta]) : DistribucionParaJugadas = _simularJugadas(jugadas)
-  def simularApuestas(apuestas : List[(JugadaRuleta, Dinero)]) : DistribucionParaApuestas = _simularApuestas(apuestas)
+  def simularApuesta(apuesta : Apuesta): DistribucionParaApuestas = _simularApuesta(apuesta)
 
   def todosLosPosiblesSucesos() : List[Suceso] = {
     val rojo = Some(Rojo)

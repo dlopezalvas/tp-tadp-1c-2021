@@ -1,13 +1,13 @@
 import Color.Color
 import LadoMoneda.LadoMoneda
 import Paridad.Paridad
-import Tipos.{Apuesta, Dinero}
+import Tipos.{Dinero}
 
 abstract class Jugada() {
   def factorGanancia: Int
 
-  def dineroSegun(apuestas: List[Apuesta]): Dinero = {
-    (apuestas
+  def dineroSegun(apuesta: List[(Jugada, Dinero)]): Dinero = {
+    (apuesta.
       filter { case (jugada, _) => jugada == this }
       map    { case (_, dinero) => dinero * factorGanancia }
     ).sum

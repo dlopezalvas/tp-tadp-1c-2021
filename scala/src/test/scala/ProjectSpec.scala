@@ -11,7 +11,7 @@ class ProjectSpec extends AnyFreeSpec {
         1 shouldBe 1
       }
     }
-
+/*
     "Moneda" - {
       "Probabilidad que salga Cara debe ser 50%" in {
         val jugarACara:JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
@@ -54,5 +54,6 @@ class ProjectSpec extends AnyFreeSpec {
         ))
       }
     }
+*/
   }
 }

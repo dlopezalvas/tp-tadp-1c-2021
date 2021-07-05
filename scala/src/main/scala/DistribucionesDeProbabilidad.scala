@@ -1,4 +1,4 @@
-import Tipos.{Apuesta, Dinero, Probabilidad}
+import Tipos.{Dinero, Probabilidad}
 
 
 // DistribucionParaJugadas: un wrapper para la distribución cruda
@@ -40,7 +40,7 @@ case object DistribucionParaApuestas {
     dineroSinRepetidos.map(dinero => (dinero, distribucion.filter(_._1 == dinero).map(_._2).sum)).toList
   }
 
-  def desdeDistribucionParaJugadas(distribucionParaJugadas: DistribucionParaJugadas, apuestas: List[Apuesta]) : DistribucionParaApuestas = {
+  def desdeDistribucionParaJugadas(distribucionParaJugadas: DistribucionParaJugadas, apuestas: List[(Jugada, Dinero)]) : DistribucionParaApuestas = {
     DistribucionParaApuestas(unificarRepetidos(distribucionParaJugadas.distribucion
         .map { case (jugadas, probabilidad) => (jugadas.map(_.dineroSegun(apuestas)).sum , probabilidad)}))
   }
