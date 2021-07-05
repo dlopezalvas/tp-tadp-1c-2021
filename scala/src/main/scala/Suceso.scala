@@ -11,6 +11,10 @@ trait Suceso {
   def cumpleEstrictamenteCon(jugadasACumplir : List[Jugada], todasLasJugadasEnCuestion : List[Jugada]) : Boolean = {
     todasLasJugadasEnCuestion.filter(cumpleCon(_)).toSet == jugadasACumplir.toSet
   }
+
+  def cumpleConTodas(jugadas:List[Jugada]) : Boolean = {
+    jugadas.forall(jugada => cumpleCon(jugada))
+  }
 }
 
 case class SucesoRuleta(val numero: Int, val color: Option[Color]) extends Suceso {
