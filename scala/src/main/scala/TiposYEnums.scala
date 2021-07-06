@@ -22,6 +22,6 @@ object LadoMoneda extends Enumeration{
 }
 
 object CosasTesting {
-  val algo1 = PlanDeJuego("algo1", List(Apuesta(List((ColorJugado(Color.Rojo), 10)), Ruleta), Apuesta(List((ParidadJugada(Paridad.Par), 10)), Ruleta)))
-  val algo2 = PlanDeJuego("algo2", List(Apuesta(List((ColorJugado(Color.Rojo), 10), (ParidadJugada(Paridad.Par), 10)), Ruleta), Apuesta(List((JugadaMoneda(LadoMoneda.Cara), 30)), Moneda())))
+  val algo1 = PlanDeJuego("algo1", List(ApuestaRuleta(List((ColorJugado(Color.Rojo), 10))), ApuestaRuleta(List((ParidadJugada(Paridad.Par), 10)))))
+  val algo2 = PlanDeJuego("algo2", List(ApuestaRuleta(List((ColorJugado(Color.Rojo), 10), (ParidadJugada(Paridad.Par), 10))), ApuestaMoneda(List((JugadaMoneda(LadoMoneda.Cara), 30)))))
 }
