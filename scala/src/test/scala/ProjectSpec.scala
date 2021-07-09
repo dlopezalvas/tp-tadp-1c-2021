@@ -26,10 +26,22 @@ class ProjectSpec extends AnyFreeSpec {
         val jugarAlNumero5: JugadaRuleta = NumeroJugado(5)
         Ruleta.simularJugadas(List(jugarAlNumero5)).distribucion.filter(p => p._1.contains(jugarAlNumero5)) shouldBe List((List(jugarAlNumero5),1.0/37.0))
       }
+
+      "Probabilidad de que salga un color es 18/37" in {
+        val jugarRojo: JugadaRuleta = ColorJugado(Color.Rojo)
+        val apuesta: ApuestaRuleta = ApuestaRuleta(List((jugarRojo, 1.0)))
+        Ruleta.simularApuesta(apuesta).distribucion.filter(d => d._1 > 0) shouldBe List((2.0,18.0/37.0))
+      }
+
+      "Probabilidad de que salga una docena es de 12/37" in {
+        val jugarDocena: JugadaRuleta = DocenaJugada(1)
+        val apuesta: ApuestaRuleta = ApuestaRuleta(List((jugarDocena, 1.0)))
+        Ruleta.simularApuesta(apuesta).distribucion.filter(d => d._1 > 0) shouldBe List((3.0,12.0/37.0))
+      }
     }
 
     "Probabilidad de Apuestas" - {
-      "Si juego $10 a cara tengo 50% de probabilidad de ganar $20" in {
+      "Si juego cara tengo 50% de probabilidad de ganar y duplicar mi dinero" in {
         val jugarACara:JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
         val apuesta : ApuestaMoneda = ApuestaMoneda(List((jugarACara, 10.0)))
         Moneda(1.0, 1.0).simularApuesta(apuesta) shouldBe DistribucionParaApuestas(List(
@@ -38,7 +50,7 @@ class ProjectSpec extends AnyFreeSpec {
         ))
       }
 
-      "Si juego $10 a Rojo, $5 a Par en la ruleta" in {
+      "Si juego primero un color y luego a par en la ruleta tengo 4 distribuciones posibles" in {
         val jugarARojo:JugadaRuleta = ColorJugado(Color.Rojo)
         val jugarAPar:JugadaRuleta = ParidadJugada(Paridad.Par)
         val apuestas : ApuestaRuleta = ApuestaRuleta(List((jugarARojo, 10.0), (jugarAPar, 5.0)))
@@ -50,9 +62,9 @@ class ProjectSpec extends AnyFreeSpec {
         ))
       }
 
-      "Si juego $12 a Rojo, $12 a Par en la ruleta" in {
+      "Si juego un color y luego a par con el mìsmo monto en la ruleta tengo 3 distribuciones posibles" in {
         val jugarARojo:JugadaRuleta = ColorJugado(Color.Rojo)
-        val jugarAPar:JugadaRuleta = ParidadJugada(Paridad.Par)
+        val jugarAPar: JugadaRuleta = ParidadJugada(Paridad.Par)
         val apuestas : ApuestaRuleta = ApuestaRuleta(List((jugarARojo,12.0),(jugarAPar,12.0)))
         Ruleta.simularApuesta(apuestas) shouldBe DistribucionParaApuestas(List(
           ( 0.0, 9.0/37.0),
@@ -63,7 +75,7 @@ class ProjectSpec extends AnyFreeSpec {
     }
 
     "Jugadas Sucesivas" - {
-      "Juego $10 a cara en la moneda, luego $15 al 0 en la ruleta" in {
+      "Si juego cara en la moneda y luego a un nro en la ruleta mis planes son" in {
         val jugarACara:JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
         val jugarAlCero: JugadaRuleta = NumeroJugado(0)
 
@@ -79,7 +91,7 @@ class ProjectSpec extends AnyFreeSpec {
         )
       }
 
-      "Juego $10 al 16, luego $15 al negro" in {
+      "Si juego un nro y luego un color mis probabilidades son" in {
         val jugarAl16 = NumeroJugado(16)
         val juegoNegro = ColorJugado(Color.Negro)
 
@@ -94,10 +106,12 @@ class ProjectSpec extends AnyFreeSpec {
           (380.0, (1.0/37.0)*(18.0/37.0))
         )
       }
+
+      //TODO: agregar combinaciones  moneda-color   paridad-docena
     }
 
     "Jugadores y Planes de Juego" - {
-      "Jugar 2 veces la moneda es mejor que jugar la moneda y un numero en la ruleta para el jugador racional" in {
+      "El jugador racional elige el plan mejor puntuado según su criterio" in {
         val jugarACara: JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
         val jugarACruz: JugadaMoneda = JugadaMoneda(LadoMoneda.Cruz)
         val jugarAlCero: JugadaRuleta = NumeroJugado(0)
@@ -115,7 +129,7 @@ class ProjectSpec extends AnyFreeSpec {
         jugador.elegirPlanDeJuego(List(planDeJuego1, planDeJuego2)) shouldBe planDeJuego2
       }
 
-      "Para el jugador arriesgado es mejor ganar más plata con menos probabilidad" in {
+      "El jugador arriesgado elige el plan con más plata posible" in {
         val jugarAl16 = NumeroJugado(16)
         val juegoNegro = ColorJugado(Color.Negro)
 
@@ -132,7 +146,7 @@ class ProjectSpec extends AnyFreeSpec {
         jugador.elegirPlanDeJuego(List(planDeJuego1, planDeJuego2)) shouldBe planDeJuego2
       }
 
-      "El jugador cauto elige el plan con menos chance de perder plata" in {
+      "El jugador cauto elige el plan mas seguro de no perder plata" in {
         val jugarACara: JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
         val jugarAlUno: JugadaRuleta = NumeroJugado(1)
 
@@ -147,5 +161,7 @@ class ProjectSpec extends AnyFreeSpec {
         jugador.elegirPlanDeJuego(List(planDeJuego1, planDeJuego2)) shouldBe planDeJuego1
       }
     }
+
+    //TODO: agregar otro jugador
   }
 }
