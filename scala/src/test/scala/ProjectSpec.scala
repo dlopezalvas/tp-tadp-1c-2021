@@ -78,6 +78,22 @@ class ProjectSpec extends AnyFreeSpec {
           (5.0, 0.5)
         )
       }
+
+      "Juego $10 al 16, luego $15 al negro" in {
+        val jugarAl16 = NumeroJugado(16)
+        val juegoNegro = ColorJugado(Color.Negro)
+
+        val apostarAl16:ApuestaRuleta = ApuestaRuleta(List((jugarAl16,10.0)))
+        val apostarANegro:ApuestaRuleta = ApuestaRuleta(List((juegoNegro,15.0)))
+
+        val planDeJuego:PlanDeJuego = PlanDeJuego("numeroYColor",List(apostarAl16,apostarANegro))
+
+        planDeJuego.aplicar(15.0) shouldBe List(
+          (5.0, 0.9729729729729721),
+          (350.0, 0.013878743608473342), //(1.0/37.0)*(18.0/37.0)), //TODO: revisar #rari
+          (380.0, (1.0/37.0)*(18.0/37.0))
+        )
+      }
     }
 
     "Jugadores y Planes de Juego" - {
@@ -97,6 +113,38 @@ class ProjectSpec extends AnyFreeSpec {
         val jugador: Jugador = Jugador(15.0, criterioRacional)
 
         jugador.elegirPlanDeJuego(List(planDeJuego1, planDeJuego2)) shouldBe planDeJuego2
+      }
+
+      "Para el jugador arriesgado es mejor ganar más plata con menos probabilidad" in {
+        val jugarAl16 = NumeroJugado(16)
+        val juegoNegro = ColorJugado(Color.Negro)
+
+        val apostarDiezAl16:ApuestaRuleta = ApuestaRuleta(List((jugarAl16,10.0)))
+        val apostarQuinceAl16:ApuestaRuleta = ApuestaRuleta(List((jugarAl16,15.0)))
+        val apostarQuinceANegro:ApuestaRuleta = ApuestaRuleta(List((juegoNegro,15.0)))
+        val apostarDiezANegro:ApuestaRuleta = ApuestaRuleta(List((juegoNegro,10.0)))
+
+        val planDeJuego1:PlanDeJuego = PlanDeJuego("numeroYColor",List(apostarDiezAl16,apostarQuinceANegro))
+        val planDeJuego2:PlanDeJuego = PlanDeJuego("numeroYColor",List(apostarQuinceAl16,apostarDiezANegro))
+
+        val jugador: Jugador = Jugador(15.0, criterioArriesgado )
+
+        jugador.elegirPlanDeJuego(List(planDeJuego1, planDeJuego2)) shouldBe planDeJuego2
+      }
+
+      "El jugador cauto elige el plan con menos chance de perder plata" in {
+        val jugarACara: JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
+        val jugarAlUno: JugadaRuleta = NumeroJugado(1)
+
+        val apostar10ACara: ApuestaMoneda = ApuestaMoneda(List((jugarACara, 10.0)))
+        val apostar10AlUno: ApuestaRuleta = ApuestaRuleta(List((jugarAlUno, 10.0)))
+
+        val jugador: Jugador = Jugador(15.0, criterioCauto)
+
+        val planDeJuego1:PlanDeJuego = PlanDeJuego("dosVecesCara",List(apostar10ACara,apostar10ACara))
+        val planDeJuego2:PlanDeJuego = PlanDeJuego("dosVecesUno",List(apostar10AlUno,apostar10AlUno))
+
+        jugador.elegirPlanDeJuego(List(planDeJuego1, planDeJuego2)) shouldBe planDeJuego1
       }
     }
   }
