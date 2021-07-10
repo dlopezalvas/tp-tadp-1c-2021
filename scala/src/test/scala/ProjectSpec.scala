@@ -42,6 +42,15 @@ class ProjectSpec extends AnyFreeSpec {
         val simulacion: (Dinero, Probabilidad) =Ruleta.simularApuesta(apuesta).distribucion.filter(d => d._1 > 0).head
         roundProb(simulacion._2) shouldBe roundProb(12.0/37.0)
       }
+
+      "Probabilidad que salga Cara en moneda cargada debe ser mayor al 50%" in {
+        val jugarACara:JugadaMoneda = JugadaMoneda(LadoMoneda.Cara)
+
+        Moneda(2.0, 1.0).simularJugadas(List(jugarACara)) shouldBe DistribucionParaJugadas(List(
+          (List(JugadaMoneda(LadoMoneda.Cara)),2.0/3.0),
+          (List(),1.0/3.0)
+        ))
+      }
     }
 
     "Probabilidad de Apuestas" - {
