@@ -44,19 +44,6 @@ case class Moneda(pesoCara : Peso, pesoCruz : Peso) extends Juego {
   // sirven de fachada para asegurar que sólo se simulen jugadas/apuestas que correspondan al juego Moneda
   def simularJugadas(jugadas : List[JugadaMoneda]) : DistribucionParaJugadas = _simularJugadas(jugadas)
   def simularApuesta(apuesta : ApuestaMoneda): DistribucionParaApuestas = _simularApuesta(apuesta)
-    /*
-    TODO: en realidad, a esto de arriba nada te impide pasarle apuestas con pesos distintos a los de la moneda
-          ejemplo:  Moneda(1, 1).simularApuesta(ApuestaMoneda(List(JugadaMoneda(LadoMoneda.Cara)), 99, 12213) no tira ningún error
-          esto va más allá del sistema de tipos, entonces sin una validación en runtime no se puede evitar.
-          así como está, los pesos de la Moneda pisan los pesos de la Apuesta (en el ejemplo de arriba los pesos se evalúan como 1 y 1)
-          eso se podría invertir con un if muy feo:
-            if (apuesta.pesoCara == pesoCara && apuesta.pesoCruz == pesoCruz)
-              _simularApuesta(apuesta)
-            else
-              Moneda(apuesta.pesoCara, apuesta.pesoCruz)._simularApuesta(apuesta) // o lanzar excepcion
-          pero es horrible
-          quizás no sea algo tan importante anyway
-     */
 
   def todosLosPosiblesSucesos() : List[Suceso] = List(
     SucesoMoneda(LadoMoneda.Cara, pesoCara),
