@@ -2,7 +2,7 @@ object Tipos {
   type Dinero = Double
   type Probabilidad = Double
   type Peso = Double
-  type DistribucionPlanDeJuego = (PlanDeJuego, List[(Dinero, Probabilidad)])
+  type DistribucionPlanDeJuego = (PlanDeJuego, List[(Dinero, Probabilidad)]) // TODO puede ser un case class
   type CriterioJugador = (Dinero, List[DistribucionPlanDeJuego]) => PlanDeJuego
 }
 

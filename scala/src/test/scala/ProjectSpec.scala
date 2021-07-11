@@ -194,7 +194,8 @@ class ProjectSpec extends AnyFreeSpec {
         // al contrario que el jugador cauto elige la opción con mas probabilidades de perder (?
         object criterioLoco extends CriterioJugador{
           def apply(montoInicial: Dinero, distribuciones: List[DistribucionPlanDeJuego]): PlanDeJuego =
-            distribuciones.maxBy(_._2.filter(_._1 <= montoInicial).map(_._2).sum)._1
+            // distribuciones.maxBy(_._2.filter(_._1 <= montoInicial).map(_._2).sum)._1
+            distribuciones.maxBy(_._2.collect{ case (monto, probabilidad) if monto <= montoInicial => probabilidad }.sum)._1
         }
 
         val apostarPocoACara: ApuestaMoneda = ApuestaMoneda(List((JugadaMoneda(LadoMoneda.Cara), 10.0)))

@@ -2,6 +2,7 @@ import Color.{Color, Rojo, Negro}
 import Tipos.{Dinero, Peso, Probabilidad}
 import Utilidades.conjuntoPotencia
 
+// TODO fijarse si va por tipos paramétricos
 trait Juego {
 
   // _simularApuestas: obtiene la distribución de probabilidad de las posibles ganancias dada una apuesta compuesta
@@ -17,19 +18,15 @@ trait Juego {
   //    itera por el producto cartesiano entre los sucesos del juego y todos los posibles subconjuntos de jugadas
   //    registrando la probabilidad correspondiente a cada combinacion de jugadas
   //    que sea cumplida (estrictamente) por un suceso
-  protected def _simularJugadas(jugadasASimular : List[Jugada]) : DistribucionParaJugadas = {
-    var distribucion = new DistribucionParaJugadas(List());
+  protected def _simularJugadas(jugadasASimular: List[Jugada]): DistribucionParaJugadas = {
+    var distribucion = new DistribucionParaJugadas(List())
     for (
       suceso <- todosLosPosiblesSucesos();
-      posibleCombinacionDeJugadas <- conjuntoPotencia(jugadasASimular)
+      posibleCombinacionDeJugadas <- conjuntoPotencia(jugadasASimular) if suceso.cumpleEstrictamenteCon(posibleCombinacionDeJugadas, jugadasASimular)
     ) {
-      if (suceso.cumpleEstrictamenteCon(posibleCombinacionDeJugadas, jugadasASimular))
-        distribucion = distribucion.incrementarProbabilidadDe(
-          posibleCombinacionDeJugadas,
-          probabilidadDeSuceso(suceso)
-        );
+      distribucion = distribucion.incrementarProbabilidadDe(posibleCombinacionDeJugadas, probabilidadDeSuceso(suceso))
     }
-    distribucion;
+    distribucion
   }
 
   def probabilidadDeSuceso(suceso : Suceso) : Probabilidad = suceso.peso / todosLosPosiblesSucesos.map(_.peso).sum;
